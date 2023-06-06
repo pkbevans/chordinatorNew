@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="grids_off">"Keine Akkorddiagramme"</string>
+    <string name="set_options">"Voreinstellungen"</string>
+    <string name="auto_scroll">"AutoScroll"</string>
+    <string name="stop_scroll">"AutoScroll stoppen "</string>
+    <string name="ok">"OK"</string>
+    <string name="cancel">"Abbrechen"</string>
+    <string name="help">"Hilfe"</string>
+    <string name="edit_song">"Bearbeiten"</string>
+    <string name="share_song">"Teilen"</string>
+    <string name="help_screen_title">"Chordinator Hilfe"</string>
+    <string name="open">"Öffnen"</string>
+    <string name="add_to_set_list">"Song zur Setliste hinzufügen"</string>
+    <string name="edit_setlist">"Setliste bearbeiten"</string>
+    <string name="choose_set">"Setliste auswählen"</string>
+    <string name="add">"Neue Setliste"</string>
+    <string name="no_sets">"Keine Setlisten vorhanden"</string>
+    <string name="up">"Aufwärts"</string>
+    <string name="down">"Abwärts"</string>
+    <string name="delete">"Löschen"</string>
+    <string name="delete_all">"Alle Songs löschen"</string>
+    <string name="save">"Speichern"</string>
+    <string name="add_new_set">"Neue Setliste"</string>
+    <string name="autoscroll_summary_on">"Alle Songs werden automatisch gescrollt"</string>
+    <string name="autoscroll_summary_off">"Kein AutoScroll"</string>
+    <string name="chord_grids_summary_on">"Akkorddiagramme immer anzeigen"</string>
+    <string name="chord_grids_summary_off">"Akkorddiagramme nicht anzeigen"</string>
+    <string name="save_trans">"Transponierten Song speichern"</string>
+    <string name="grids_on">"Akkorddiagramme anzeigen"</string>
+    <string name="save_text">"Als Text-Datei speichern"</string>
+    <string name="refresh">"Aktualisieren"</string>
+    <string name="convert">"Als ChoPro-Datei speichern"</string>
+    <string name="artist">"Künstler"</string>
+    <string name="title">"Titel"</string>
+    <string name="composer">"Komponist"</string>
+    <string name="set_song_details">"Song Details speichern"</string>
+    <string name="empty_set">"Setliste ist leer. Bitte fügen Sie Songs hinzu"</string>
+    <string name="save_html">"Als HTML-Datei speichern"</string>
+    <string name="close">"Schließen"</string>
+    <string name="options">"Optionen"</string>
+    <string name="banned_file_type">"Chordinator kann diesen Dateityp nicht öffnen"</string>
+    <string name="save_as">"als Kopie speichern"</string>
+    <string name="copy_failed">"Kopieren fehlgeschlagen"</string>
+    <string name="copying">"… wird kopiert"</string>
+    <string name="file_exists">"Datei existiert bereits. Bitte wählen Sie einen anderen Namen."</string>
+    <string name="new_file_name">"Neuer Dateiname"</string>
+    <string name="are_you_sure_delete">"Möchten Sie diese Datei wirklich löschen?"</string>
+    <string name="no_todos">"Momentan sind keine Songs vorhanden"</string>
+    <string name="menu_insert">"Song einfügen"</string>
+    <string name="menu_delete">"Song löschen"</string>
+    <string name="song_summary">"Zusammenfassung"</string>
+    <string name="song_description">"Song löschen"</string>
+    <string name="song_edit_summary">"Zusammenfassung"</string>
+    <string name="song_edit_description">"Beschreibung    "</string>
+    <string name="song_edit_confirm">"Bestätigen"</string>
+    <string name="set_name">"Setliste auswählen"</string>
+    <string name="menu_delete_set">"Setliste löschen"</string>
+    <string name="search">"Suchen"</string>
+    <string name="tabname_songs">"Meine Songs"</string>
+    <string name="tabname_sets">"Setlisten"</string>
+    <string name="tabname_browse">"Dateibrowser"</string>
+    <string name="toggle_favs">"Umschalten Favoriten"</string>
+    <string name="no_songs">"Keine Songs vorhanden? Sie können den Datei-Browser verwenden, um Ihre vorhandenen Songs zu finden, oder benutzen Sie den Song-Scan Funktion oder suchen im Internet nach neuen Songs."</string>
+    <string name="favourites">"Favoriten"</string>
+    <string name="recent">"Kürzlich"</string>
+    <string name="already_chopro">"Dieser Song ist bereits im ChoPro Format."</string>
+    <string name="saved">"Gespeichert"</string>
+    <string name="filename">"Neuer Dateiname"</string>
+    <string name="song_found">"Neuer Song gefunden"</string>
+    <string name="loading_page">"Seite wird geladen…"</string>
+    <string name="save_file">"Die Datei hat sich geändert. Wollen Sie sie speichern?"</string>
+    <string name="welcome">"Willkommen bei"</string>
+    <string name="scan_for_songs">"Aktualisierung der Songliste"</string>
+    <string name="search_songs">"im Internet nach Songs suchen"</string>
+    <string name="tabname_welcome">"Willkommen"</string>
+    <string name="pref_cat_songviewer">"Song-Anzeige"</string>
+    <string name="pref_tit_grids_on">"Akkorddiagramme immer zeigen"</string>
+    <string name="pref_sum_grids_on">"Die Anzeige der Akkorddiagramme ist in den Voreinstellungen aktiviert"</string>
+    <string name="pref_tit_colour_scheme">"Farbschema"</string>
+    <string name="pref_tit_text_files">"Textdateien"</string>
+    <string name="pref_tit_encoding">"Standard-Codierung"</string>
+    <string name="pref_sum_encoding">"Text-Datei Encoding verwenden, um Song-Dateien zu öffnen. Lassen Sie diese Option im Zweifelsfall leer. Versuchen Sie \"UTF-8\" in Asien oder \"Windows-1251\" für Kyrillisch"</string>
+    <string name="pref_sum_grids_off">"Akkorddiagramme werden NICHT angezeigt"</string>
+    <string name="pref_tit_text_size">"Textgröße"</string>
+    <string name="pref_autoscroll">"Auto Scroll"</string>
+    <string name="pref_turboscroll">"Schneller scrollen"</string>
+    <string name="pref_sum_autoscroll_on">"Songs scrollen in der Anzeige automatisch "</string>
+    <string name="pref_sum_autoscroll_off">"Songs scrollen in der Anzeige nicht automatisch "</string>
+    <string name="pref_sum_turboscroll_on">"Schnelleres scrollen ist ausgeschaltet"</string>
+    <string name="pref_sum_turboscroll_off">"Schnelleres scrollen ist eingeschaltet"</string>
+    <string name="pref_sum_adddashes_off">"Bindestriche werden nicht hinzugefügt, wenn Wörter durch einen Akkord getrennt werden"</string>
+    <string name="pref_sum_adddashes_on">"Bindestriche werden hinzugefügt, wenn Wörter durch einen Akkord getrennt werden"</string>
+    <string name="pref_tit_adddashes">"Bindestriche hinzufügen, wenn Wörter durch Akkorde getrennt werden"</string>
+    <string name="pref_sum_honourlfs_off">"Leerzeilen werden nicht angezeigt"</string>
+    <string name="pref_sum_honourlfs_on">"Leerzeilen werden angezeigt"</string>
+    <string name="pref_tit_honourlfs">"Leerzeilen"</string>
+    <string name="pref_tit_scroll_delay">"Autoscroll-Verzögerung in Sekunden"</string>
+    <string name="pref_sum_scroll_delay">"Scroll-Verzögerung in Sekunden am Beginn"</string>
+    <string name="search_for">"Song oder Künstler, nach dem gesucht wird"</string>
+    <string name="only_chordie">"Nur auf Chordie.com suchen"</string>
+    <string name="scanning">"Scannen…"</string>
+    <string name="add_songs">"Hinzufügen von Songs…"</string>
+    <string name="done">"Fertig"</string>
+    <string name="already_in_set">"ist bereits in der Setliste."</string>
+    <string name="menu_delete_from_set">"Aus der Setliste entfernen"</string>
+    <string name="back_to_sets">"Zurück zur Setliste"</string>
+    <string name="set">"Setliste"</string>
+    <string name="set_deleted">"Setliste gelöscht"</string>
+    <string name="failed_to_delete">"Fehler beim Löschen"</string>
+    <string name="pref_tit_chord_grid_instrument">"Instrument"</string>
+    <string name="song_browser_title">"Song-Browser Chordinator"</string>
+    <string name="banned_file">"Chordinator kann diese Datei nicht öffnen"</string>
+    <string name="up_to">"Bis zu "</string>
+    <string name="no_song">"Kein Song ausgewählt."</string>
+    <string name="whats_new">"Was ist neu?"</string>
+    <string name="select_set">"Wählen Sie die Setliste"</string>
+    <string name="search_instruction">"1.Geben Sie Songtitel und / oder Künstlername ein\n2.Google-Links folgen\n3.App holt sich song\n4.Neuen Dateinamen bestätigen"</string>
+    <string name="search_instruction1">"1.Geben Sie Songtitel und / oder Künstlername ein"</string>
+    <string name="search_instruction2">"2.Google-Links folgen"</string>
+    <string name="search_instruction3">"3.App holt sich chopro"</string>
+    <string name="search_instruction4">"4 Neuen Dateinamen bestätigen"</string>
+    <string name="searching">"Suche…"</string>
+    <string name="search_title">"Chordinator Suche"</string>
+    <string name="pref_sum_chord_grid_instrument">"Das Instrument, für das Akkorddiagramme gezeigt werden"</string>
+    <string name="pref_sum_colour_scheme">"Das Song-Screen-Farbschema"</string>
+    <string name="pref_sum_textsize">"Textgröße auf dem SONG-Screen"</string>
+    <string name="home">"Home"</string>
+    <string name="rename">"Umbenennen…"</string>
+    <string name="rename_set">"Umbenennen der Setliste …"</string>
+    <string name="are_you_sure_delete_set">"Wollen Sie die Setliste wirklich löschen?"</string>
+    <string name="new_set_name">"Neuer Name fur Setliste"</string>
+    <string name="rename_failed">"Fehler beim Umbenennen"</string>
+    <string name="pref_tit_mode">"Akkord- und Text-Anzeige"</string>
+    <string name="pref_sum_mode">"Anzeigen: Akkorde oder Text oder beides"</string>
+    <string name="add_songs_to">"Fügen Sie Songs zu"</string>
+    <string name="export_settings">"Export-Einstellungen"</string>
+    <string name="import_settings">"Einstellungen importieren"</string>
+    <string name="settings_exported">"Einstellungen exportiert nach"</string>
+    <string name="settings_imported">"Einstellungen erfolgreich importiert"</string>
+    <string name="export_failed">"Export fehlgeschlagen"</string>
+    <string name="import_failed">"Einstellungen konnten nicht gefunden werden"</string>
+    <string name="song_too_big">"Song zu groß – Verringern Sie die Textgröße"</string>
+    <string name="orig_trans">"Zurück zur Original Tonart"</string>
+    <string name="chorus">"Refrain"</string>
+    <string name="import_set">"Importieren Setliste"</string>
+    <string name="export_set">"Eportieren Setliste"</string>
+    <string name="exported_to">"Exportiert nach"</string>
+    <string name="imported">"Importiert"</string>
+    <string name="added">"Hinzugefügt"</string>
+    <string name="songs">"songs"</string>
+    <string name="no_songs_found">"Keine neuen Songs gefunden"</string>
+    <string name="pref_sum_split_screen_on">"geteilten Bildschirm im Querformat verwenden"</string>
+    <string name="pref_sum_split_screen_off">"geteilten Bildschirm im Querformat NICHT verwenden"</string>
+    <string name="pref_tit_split_screen">"im Querformat Bildschirm aufteilen"</string>
+    <string name="sendlog">"Protokoll-Datei an Entwickler senden"</string>
+    <string name="promote_paid_app_text">"Falls Chordinator gefällt, kann für einen geringen Betrag Chordinator Augmented erworben und damit die Weiterentwicklung unterstützt werden."</string>
+    <string name="promote_paid_app_title">"Haben Sie Chordinator Augmented versuchen"</string>
+    <string name="keywords">"Schlüsselwörter"</string>
+    <string name="no_thanks">"Vielleicht später :("</string>
+    <string name="no_network">"Keine Internetverbindung verfügbar"</string>
+    <string name="search_hint">"Songsuche"</string>
+    <string name="files_scanned">"Dateien durchsucht: %s"</string>
+    <string name="songs_found">"Neue Songs gefunden: %s"</string>
+    <string name="task_started_msg">"Gestartet"</string>
+    <string name="task_cancelled_msg">"Abbruch"</string>
+    <string name="task_complete_msg">"Beendet"</string>
+    <string name="start">"Suche starten"</string>
+    <string name="folder">"Pfadname"</string>
+    <string name="file">"Datei:"</string>
+    <string name="print">"Drucken…"</string>
+    <string name="chord_aug_firstrun_heading">"Erster Suchlauf"</string>
+    <string name="alphabet">"ABCDEFGHIJKLMNOPQRSTUVWXYZ"</string>
+    <string name="show_details">"Zeige Details"</string>
+    <string name="song_details">"Songdetails"</string>
+    <string name="browse_to">"Zeige Speicherort"</string>
+    <string name="split_proportions">"Bildschirm Teilungsverhältnis"</string>
+    <string name="pref_sum_split_proportions">"Stellen Sie die Proportionen des im Querformat  geteilten Fensters ein"</string>
+    <string name="delete_from_disk">"Löschen der Songdatei von der Festplatte"</string>
+    <string name="convert_chopro">"Speichern im Chopro-Format"</string>
+    <string name="make_download_dir">"Diesen Pfad für Downloads speichern"</string>
+    <string name="upgrade_now">"Upgraden Sie jetzt!"</string>
+
+    <string-array name="colour_schemes">
+        <item>"Schwarzer Text auf weißem Hintergrund"</item>
+        <item>"Weißer Text auf schwarzem Hintergrund"</item>
+    </string-array>
+
+    <string-array name="grid_instrument_entries">
+        <item>"Gitarre"</item>
+        <item>"Mandoline"</item>
+        <item>"Ukulele"</item>
+        <item>Tenor (C-G-D-A)</item>
+    </string-array>
+
+    <string-array name="modes">
+        <item>"Normal - Akkorde und Texte"</item>
+        <item>"Nur Akkorde - Text wird nicht angezeigt"</item>
+        <item>"Nur Text - Akkorde werden nicht angezeigt"</item>
+    </string-array>
+    <string name="buffering_msg">"Arbeiten…"</string>
+    <string name="pref_sum_inline_mode">"Wählen Wenn Akkorde angezeigt werden In-line"</string>
+    <string name="pref_tit_inline_mode">"In-Line- Akkorde"</string>
+    <string-array name="inline_mode_entries">
+        <item>Nur wenn {inline} tag in Song-Datei verwendet</item>
+        <item>Immer zeigen Akkorde In-line</item>
+    </string-array>
+    <string name="pref_tit_scroll_speed_factor">Scroll speed multiplier</string>
+    <string name="edit_as_txt">Text bearbeiten</string>
+    <string name="pref_sum_scroll_speed_factor">\"Schneller scrollen\"</string>
+    <string name="permission_required">Chordinator will not work without access to the internal storage</string>
+    <string name="read_only_file">Diese Datei ist schreibgeschützt, so dass einige Optionen nicht verfügbar sind</string>
+    <string name="cant_open_file">Unable to open this file</string>
+    <string name="print_inline_chords">Print (Inline Chords)&#8230;</string>
+
+</resources>
