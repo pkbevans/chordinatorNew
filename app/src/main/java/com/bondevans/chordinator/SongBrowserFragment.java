@@ -14,6 +14,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+
+import androidx.activity.result.ActivityResult;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.ListFragment;
 import androidx.core.content.FileProvider;
@@ -47,6 +49,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+
+import static android.app.Activity.RESULT_OK;
 
 public class SongBrowserFragment extends ListFragment 
 {
@@ -177,30 +181,16 @@ public class SongBrowserFragment extends ListFragment
 		mCards.log();
 		browseFolder(mCurrentDirectory);
 	}
-
-	/* (non-Javadoc)
-	 * @see android.app.Activity#onActivityResult(int, int, android.content.Intent)
-	 */
-	@Override
-	public void onActivityResult(int requestCode, int resultCode, Intent data) {
-		Log.d(TAG, "HELLO onActivityResult-fragment");
-		// If Exit pressed on sub activity, then exit the whole application
-		if( requestCode == SongUtils.SONGACTIVITY_REQUEST ){
-			System.gc();
-			switch (resultCode){
-			case Activity.RESULT_OK:
-				browseFolder(mCurrentDirectory); 	// Refresh
-				setSelection(mPosition);
-				break;
-			default:
-				super.onActivityResult(requestCode, resultCode, data);
-			}
-		}
-		else{
-			super.onActivityResult(requestCode, resultCode, data);
+	public void showSongFinished(ActivityResult result){
+		System.gc();
+		if(result.getResultCode() == RESULT_OK){
+			Log.d(TAG, "HELLO - RESULT OK");
+			browseFolder(mCurrentDirectory); 	// Refresh
+			setSelection(mPosition);
+		}else{
+			Log.d(TAG, "HELLO - RESULT NOT OK");
 		}
 	}
-
 	/**
 	 * This function browses up one level 
 	 * according to the field: currentDirectory

@@ -8,6 +8,11 @@ import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -253,12 +258,12 @@ AddSongsToSetFragment.OnSongsAddedListener
 
 		menuItem = menu.add(0,SELECTSET_ID, 0, getString(R.string.tabname_sets))
 		.setIcon(mColourScheme == LIGHT ? R.drawable.ic_setlists_light : R.drawable.ic_setlists_dark);
-		MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);//|MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+		menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);//|MenuItem.SHOW_AS_ACTION_WITH_TEXT);
 
 		menuItem = menu.add(0,SEARCH_LOCAL_ID, 0, getString(R.string.search_songs))
 		.setIcon(mColourScheme == LIGHT ? R.drawable.ai_search_light : R.drawable.ai_search_dark);
-		MenuItemCompat.setActionView(menuItem, searchSetView);
-		MenuItemCompat.setOnActionExpandListener(menuItem, new MenuItemCompat.OnActionExpandListener() {
+		menuItem.setActionView(searchSetView);
+		menuItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
 			@Override
 			public boolean onMenuItemActionCollapse(MenuItem item) {
 				// Do something when collapsed
@@ -278,15 +283,15 @@ AddSongsToSetFragment.OnSongsAddedListener
 				return true;  // Return true to expand action view
 			}
 		});
-		MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS | MenuItemCompat.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW);
+		menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS | MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW);
 
 		menuItem = menu.add(0,ADDSONGS_ID, 0, getString(R.string.add_songs))
 		.setIcon(mColourScheme == LIGHT ? R.drawable.ic_add_songs_light : R.drawable.ic_add_songs_dark);
-		MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);//|MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+		menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);//|MenuItem.SHOW_AS_ACTION_WITH_TEXT);
 
 		menuItem = menu.add(0,DELETESET_ID, 0, getString(R.string.menu_delete_set))
 		.setIcon(mColourScheme == LIGHT ? R.drawable.ic_delete_set_light : R.drawable.ic_delete_set_dark);
-		MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_IF_ROOM);//|MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+		menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);//|MenuItem.SHOW_AS_ACTION_WITH_TEXT);
 
 		menu.add(0,EXPORTSET_ID, 0, getString(R.string.export_set));
 
@@ -306,7 +311,7 @@ AddSongsToSetFragment.OnSongsAddedListener
 	void addShareButton(){
 		MenuItem menuItem = mMenu.add(0, SHARESONG_ID, 0, getString(R.string.share_song))
 		.setIcon(R.drawable.ic_menu_share);
-		MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
+		menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 		mSongInView=true;
 	}
 
@@ -400,7 +405,7 @@ AddSongsToSetFragment.OnSongsAddedListener
 		Intent myIntent = new Intent(this, ChordinatorPrefsActivity.class);
 		try {
 			//  Need to know when set prefs is finished so start for result
-			startActivityForResult(myIntent, SongUtils.SETOPTIONS_REQUEST);
+			prefsUpdateResultLauncher.launch(myIntent);
 		} catch (ActivityNotFoundException e) {
 			SongUtils.toast(this, "ChordinatorPrefsActivity not found");
 		}
@@ -490,28 +495,6 @@ AddSongsToSetFragment.OnSongsAddedListener
 		outState.putString(KEY_SETNAME, mSetName);
 		super.onSaveInstanceState(outState);
 	}
-
-	/* (non-Javadoc)
-	 * @see android.app.Activity#onActivityResult(int, int, android.content.Intent)
-	 */
-	@Override
-	public void onActivityResult(int requestCode, int resultCode, Intent data) {
-		Log.d(TAG, "HELLO onActivityResult-activity request=["+requestCode+"]result=["+resultCode+"]");
-		// If in dual pane mode, need to update the SongViewer
-		if( requestCode == SongUtils.SETOPTIONS_REQUEST){
-			Log.d(TAG, "HELLO onActivityResult2 ["+(mSongInView?"SONG":"NO SONG"));
-			if( songViewerFragment != null && mSongInView){
-				Log.d(TAG, "HELLO onActivityResult2");
-				songViewerFragment.reloadPreferences();
-			}
-			// TODO force re-draw somehow if colour scheme has changed
-			Log.d(TAG, "HELLO onActivityResult3");
-		}
-		else /*if(requestCode == SongUtils.SONGACTIVITY_REQUEST)*/{
-			Log.d(TAG, "HELLO onActivityResult");
-		}
-	}
-
 	@Override
 	public void nextSong() {
 		// NOT applicable in Landscape
@@ -520,20 +503,16 @@ AddSongsToSetFragment.OnSongsAddedListener
 	public void prevSong() {
 		// NOT applicable in Landscape
 	}
-
 	@Override
 	public void onNewFileCreated() {
 	}
-
 	@Override
 	public void browseFiles() {
 	}
-
 	@Override
 	public void createBrowserSet(String setName, String songName) {
 		// Not used.
 	}
-
 	@Override
 	public void songsAdded() {
 		Log.d(TAG, "songsAdded");
@@ -546,4 +525,18 @@ AddSongsToSetFragment.OnSongsAddedListener
 			mEditSetListFragment.setLoaded(false);
 		}
 	}
+	private final ActivityResultLauncher<Intent> prefsUpdateResultLauncher = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		new ActivityResultCallback<ActivityResult>() {
+			@Override
+			public void onActivityResult(ActivityResult result) {
+				Log.d(TAG, "HELLO onActivityResult2 ["+(mSongInView?"SONG":"NO SONG")+"]");
+				if( songViewerFragment != null && mSongInView){
+					Log.d(TAG, "HELLO onActivityResult3");
+					songViewerFragment.reloadPreferences();
+				}
+				// TODO force re-draw somehow if colour scheme has changed
+			}
+		}
+	);
 }

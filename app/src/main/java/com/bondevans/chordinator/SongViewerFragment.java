@@ -21,9 +21,6 @@ import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
 import android.print.PrintJob;
 import android.print.PrintManager;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
-import androidx.core.content.FileProvider;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.LayoutInflater;
@@ -44,16 +41,18 @@ import com.bondevans.chordinator.chunking.SongHTMLFormatter;
 import com.bondevans.chordinator.chunking.SongTextFormatter;
 import com.bondevans.chordinator.chunking.TextSongHTMLFormatter;
 import com.bondevans.chordinator.db.DBUtils;
-import com.bondevans.chordinator.dialogs.PromotePaidAppDialog;
 import com.bondevans.chordinator.grids.ChordShapeImage;
 import com.bondevans.chordinator.grids.ChordShapeProvider;
 import com.bondevans.chordinator.prefs.SongPrefs;
-import com.bondevans.chordinator.trial.Trial;
 
 import java.io.File;
 import java.io.FileDescriptor;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+
+import androidx.activity.result.ActivityResult;
+import androidx.core.content.FileProvider;
+import androidx.fragment.app.Fragment;
 
 import static com.bondevans.chordinator.Statics.CHORDINATOR_DIR;
 
@@ -94,7 +93,6 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 	private final static int SCROLL_INC = 10; //Milliseconds
 	private static final int MAXLINE_LEN = 80;
 //    private int mMinSleep=MINSLEEP_DEFAULT;
-
 	// ChordinatorPlus
 	long mSongId=0;
 	public int mScrollDelay=0;		// Number of seconds to delay before scrolling
@@ -102,11 +100,7 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 	private String [] mTextSizes = null;
 	private int mCurrentTextSizeIndex=0;
 	private int mDefaultTextSize;	// The text size set up in the preferences
-
 	SongViewerListener songViewerListener;
-
-	private int mRequestCode;
-
 	private final static int NO_TRANSPOSE=99;
 	private int mTranspose= NO_TRANSPOSE;
 	private boolean mScrollPreference;
@@ -125,7 +119,7 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 		try {
 			songViewerListener = (SongViewerListener) activity;
 		} catch (ClassCastException e) {
-			throw new ClassCastException(activity.toString()
+			throw new ClassCastException(activity
 					+ " must implement SongViewerListener");
 		}
 	}
@@ -450,7 +444,7 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 		// Restore preferences....
 		SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
 		// ...and load up into a SongPrefs object
-		mPrefs.setTextSize(Integer.parseInt(settings.getString(SongPrefs.PREF_KEY_TEXTSIZE, "22")));
+		mPrefs.setTextSize(Integer.parseInt(settings.getString(SongPrefs.PREF_KEY_TEXTSIZE, "48")));
 		mPrefs.setShowGrids(settings.getBoolean(SongPrefs.PREF_KEY_SHOWGRIDS, false));
 		showGrids = mPrefs.isShowGridsOn();
 		mGridInstrument=Integer.parseInt(settings.getString(SongPrefs.PREF_KEY_GRID_INSTRUMENT, "1"));
@@ -509,42 +503,29 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 		try {
 			// Put the path to the song file in the intent
 			myIntent.putExtra(getString(R.string.song_path), songPath);
-			mRequestCode = SongUtils.EDITSONG_REQUEST;// DIRTY HACK
-			startActivityForResult(myIntent, mRequestCode);
+			SongViewerActivity activity = (SongViewerActivity) getActivity();
+			activity.editSongResultLauncher.launch(myIntent);
 		}
 		catch (ActivityNotFoundException e) {
 			errMsgToast(e.getMessage());
 		}
 	}
-
-	/* (non-Javadoc)
-	 * @see android.support.v4.app.Fragment#onActivityResult(int, int, android.content.Intent)
-	 */
-	@Override
-	public void onActivityResult(int requestCode, int resultCode, Intent data) {
-		Log.d(TAG, "HELLO onActivityResult 1["+requestCode+"]");
-		if (requestCode == SongUtils.SETOPTIONS_REQUEST) {
-			// If something has changed, re-load the preferences (which
-			// SongOptions will have updated)
-			reloadPreferences();
-		}
-		else if (mRequestCode == SongUtils.EDITSONG_REQUEST) {// DIRTY HACK
-			if (resultCode == Activity.RESULT_OK) {
-				Log.d(TAG, "HELLO onActivityResult 2");
-				//The song has been saved so re-load the songfile
-				try {
-					mSf.reloadSong(mPrefs.getDefaultEncoding());
-					mSongCanvas.setSong(mSf.getSong());
-					//					setTitle(mSf.getTitleAndArtist());// We may have changed the name
-					Log.d(TAG, "HELLO onActivityResult 3");
-				} catch (ChordinatorException e) {
-					Toast.makeText(getActivity(), e.getMessage(), Toast.LENGTH_LONG).show();
-				}
-			}
+	public void onPrefsUpdated(ActivityResult result){
+		// If something has changed, re-load the preferences (which
+		// SongOptions will have updated)
+		reloadPreferences();
+	}
+	public void onEditSongFinished(){
+		Log.d(TAG, "HELLO onActivityResult 1");
+		//The song has been saved so re-load the songfile
+		try {
+			mSf.reloadSong(mPrefs.getDefaultEncoding());
+			mSongCanvas.setSong(mSf.getSong());
+			Log.d(TAG, "HELLO onActivityResult 2");
+		} catch (ChordinatorException e) {
+			Toast.makeText(getActivity(), e.getMessage(), Toast.LENGTH_LONG).show();
 		}
 	}
-
-
 	public void shareSong(){
 		if(mSf != null){
 			File aFile = new File(mSf.getSongFilePath());

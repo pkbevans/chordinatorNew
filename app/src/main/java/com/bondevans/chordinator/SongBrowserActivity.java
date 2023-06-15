@@ -14,6 +14,10 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -59,7 +63,7 @@ AddSetDialog.CreateSetListener
 	private static final int SEARCH_LOCAL_ID = Menu.FIRST + 25;
 
 	private static int mColourScheme;
-	private static int LIGHT=ColourScheme.LIGHT;
+	private static final int LIGHT=ColourScheme.LIGHT;
 	public static final String TAG_SONGBROWSER = "TAG_SONGBROWSER";
 	public static final String TAG_SONGVIEWER = "TAG_SONGVIEWER";
 	SongViewerFragment	songViewerFragment;
@@ -308,7 +312,7 @@ AddSetDialog.CreateSetListener
 		Intent myIntent = new Intent(this, ChordinatorPrefsActivity.class);
 		try {
 			//  Need to know when set prefs is finished so start for result
-			startActivityForResult(myIntent, SongUtils.SETOPTIONS_REQUEST);
+			prefsUpdateResultLauncher.launch(myIntent);
 		} catch (ActivityNotFoundException e) {
 			SongUtils.toast(this, "ChordinatorPrefsActivity not found");
 		}
@@ -350,14 +354,14 @@ AddSetDialog.CreateSetListener
 
 		if (viewer == null || !viewer.isVisible()) {
 			// Open the file with the SongViewerActivity
-			Intent showSong = new Intent(this, SongViewerActivity.class);
+			Intent myIntent = new Intent(this, SongViewerActivity.class);
 
-			showSong.putExtra("com.chordinator.SongPath", songFile.toString());
-			showSong.putExtra("com.bondevans.chordinator.inSetList", inSet);
-			showSong.setData(Uri.fromFile(songFile));
+			myIntent.putExtra("com.chordinator.SongPath", songFile.toString());
+			myIntent.putExtra("com.bondevans.chordinator.inSetList", inSet);
+			myIntent.setData(Uri.fromFile(songFile));
 
 			try {
-				startActivityForResult(showSong, SongUtils.SONGACTIVITY_REQUEST);
+				showSongResultLauncher.launch(myIntent);
 			}
 			catch (ActivityNotFoundException e) {
 				Log.e(TAG, "NO ACTIVITY FOUND: SongViewerActivity");
@@ -513,29 +517,6 @@ AddSetDialog.CreateSetListener
 			SongUtils.toast(this, "SearchCriteria not found");
 		}
 	}
-
-	/* (non-Javadoc)
-	 * @see android.app.Activity#onActivityResult(int, int, android.content.Intent)
-	 */
-	@Override
-	public void onActivityResult(int requestCode, int resultCode, Intent data) {
-		Log.d(TAG, "HELLO onActivityResult-activity request=["+requestCode+"]result=["+resultCode+"]");
-		// If in dual pane mode, need to update the SongViewer
-		if( requestCode == SongUtils.SETOPTIONS_REQUEST){
-			Log.d(TAG, "HELLO onActivityResult2 ["+(mSongInView?"SONG":"NO SONG"));
-			if( songViewerFragment != null && mSongInView){
-				Log.d(TAG, "HELLO onActivityResult2");
-				songViewerFragment.reloadPreferences();
-			}
-			// TODO force re-draw somehow if colour scheme has changed
-			Log.d(TAG, "HELLO onActivityResult3");
-		}
-		else /*if(requestCode == SongUtils.SONGACTIVITY_REQUEST)*/{
-			Log.d(TAG, "HELLO onActivityResult");
-			songBrowserFragment.onActivityResult(requestCode, resultCode, data);
-		}
-	}
-
 	@Override
 	public void nextSong() {
 		// NOT applicable in Landscape
@@ -544,7 +525,6 @@ AddSetDialog.CreateSetListener
 	public void prevSong() {
 		// NOT applicable in Landscape
 	}
-
 	@Override
 	public void addNewSet(String songPath) {
 		Log.d(TAG, "HELLO: addNewSet ["+songPath+"]");
@@ -614,5 +594,29 @@ AddSetDialog.CreateSetListener
 		File song = new File(songPath);
 		SongUtils.toast(context, "Added: " + song.getName() + " to : "+ setName);
 	}
-
+	private final ActivityResultLauncher<Intent> showSongResultLauncher = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		new ActivityResultCallback<ActivityResult>() {
+			@Override
+			public void onActivityResult(ActivityResult result) {
+				Log.d(TAG, "HELLO onActivityResult");
+				songBrowserFragment.showSongFinished(result);
+			}
+		}
+	);
+	private final ActivityResultLauncher<Intent> prefsUpdateResultLauncher = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		new ActivityResultCallback<ActivityResult>() {
+			@Override
+			public void onActivityResult(ActivityResult result) {
+				Log.d(TAG, "HELLO onActivityResult1 ["+(mSongInView?"SONG":"NO SONG")+"]");
+				if( songViewerFragment != null && mSongInView){
+					Log.d(TAG, "HELLO onActivityResult2");
+					songViewerFragment.reloadPreferences();
+				}
+				// TODO force re-draw somehow if colour scheme has changed
+				Log.d(TAG, "HELLO onActivityResult3");
+			}
+		}
+	);
 }

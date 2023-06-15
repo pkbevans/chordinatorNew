@@ -9,9 +9,6 @@ import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -26,6 +23,13 @@ import com.bondevans.chordinator.utils.Ute;
 
 import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
+
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class SongViewerActivity extends AppCompatActivity implements SongViewerFragment.SongViewerListener{
 	private static final int SETOPTIONS_ID = Menu.FIRST + 6;
@@ -128,18 +132,7 @@ public class SongViewerActivity extends AppCompatActivity implements SongViewerF
 		Configuration conf = getResources().getConfiguration();
 		int layout = conf.screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK;
 		Log.d(TAG, "HELLO - layout = ["+layout+"]");
-        Toolbar toolbar = (Toolbar) findViewById(R.id.tool_bar); // Attaching the layout to the toolbar object
-        if(toolbar != null){
-            setSupportActionBar(toolbar);                   // Setting toolbar as the ActionBar with setSupportActionBar() call
-			// Set up the ActionBar correctly
-			setUpActionBar();
-		}
     }
-	public void setUpActionBar(){
-		getSupportActionBar().setLogo(mColourScheme == ColourScheme.DARK? R.drawable.chordinator_aug_logo_dark_bkgrnd: R.drawable.chordinator_aug_logo_light_bkgrnd);
-		getSupportActionBar().setDisplayShowTitleEnabled(false);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-	}
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// This is the MENU button menu
@@ -160,7 +153,6 @@ public class SongViewerActivity extends AppCompatActivity implements SongViewerF
 		// This is the MENU button menu
 		return super.onPrepareOptionsMenu(menu);
 	}
-
 	// MENU Button pressed and option selected
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
@@ -202,7 +194,7 @@ public class SongViewerActivity extends AppCompatActivity implements SongViewerF
 	private void setPreferences(){
 		Intent myIntent = new Intent(this, ChordinatorPrefsActivity.class);
 		try {
-			startActivityForResult(myIntent, SongUtils.SETOPTIONS_REQUEST);
+			prefsUpdateResultLauncher.launch(myIntent);
 		} catch (ActivityNotFoundException e) {
 			SongUtils.toast(this, "ChordinatorPrefsActivity not found");
 		}
@@ -262,11 +254,6 @@ public class SongViewerActivity extends AppCompatActivity implements SongViewerF
 		this.setResult(result);
 //		this.finish();
 	}
-
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		Log.d(TAG, "HELLO onActivityResult 1["+requestCode+"]");
-		mViewer.onActivityResult(requestCode, resultCode, data);
-    }
 	/* (non-Javadoc)
 	 * @see android.app.Activity#onRestart()
 	 */
@@ -354,7 +341,7 @@ public class SongViewerActivity extends AppCompatActivity implements SongViewerF
     }
     // Our handler for received Intents. This will be called whenever an Intent
     // with an action named "custom-event-name" is broadcasted.
-    private BroadcastReceiver mFlicReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver mFlicReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             // Get extra data included in the Intent
@@ -386,4 +373,26 @@ public class SongViewerActivity extends AppCompatActivity implements SongViewerF
             }
         }
     };
+	private final ActivityResultLauncher<Intent> prefsUpdateResultLauncher = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		new ActivityResultCallback<ActivityResult>() {
+			@Override
+			public void onActivityResult(ActivityResult result) {
+				Log.d(TAG, "HELLO onActivityResult1");
+				mViewer.onPrefsUpdated(result);
+			}
+		}
+	);
+	ActivityResultLauncher<Intent> editSongResultLauncher = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		new ActivityResultCallback<ActivityResult>() {
+			@Override
+			public void onActivityResult(ActivityResult result) {
+				Log.d(TAG, "HELLO onActivityResult1");
+				if (result.getResultCode() == RESULT_OK) {
+					mViewer.onEditSongFinished();
+				}
+			}
+		}
+	);
 }

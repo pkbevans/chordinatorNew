@@ -7,6 +7,8 @@ android {
         debug {
             storeFile file('C:\\Users\\Paul\\Documents\\chordinatorNew\\keystore\\keystore.jks')
             keyAlias 'chordinator'
+            storePassword 'beefheart'
+            keyPassword 'beefheart'
         }
     }
     namespace 'com.bondevans.chordinator'
@@ -16,8 +18,8 @@ android {
         applicationId "com.bondevans.chordinator.aug"
         minSdk 16
         targetSdk 33
-        versionCode 77
-        versionName "7.0.0"
+        versionCode 78
+        versionName "7.0.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }

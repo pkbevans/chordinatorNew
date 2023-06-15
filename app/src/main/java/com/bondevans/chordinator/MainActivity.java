@@ -14,6 +14,14 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -23,6 +31,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+
+import android.provider.Settings;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -99,7 +109,12 @@ AddSetDialog.CreateSetListener
 //				Color.BLACK, Color.WHITE, CHORDINATOR_DIR);
 //		chordShapeImage.createPNG("Bdim");
 		super.onCreate(savedInstanceState);
-        checkFileAccessPermission();
+		if (checkPermission()) {
+			Log.d(TAG, "HELLO Permissions already granted...");
+		} else {
+			Log.d(TAG, "HELLO Permissions was not granted, request...");
+			requestPermission();
+		}
 		// See if they want split screen mode in Landscape
 		int listPaneSize;
 		if((listPaneSize = useSplitScreenMode())>0){
@@ -506,7 +521,7 @@ AddSetDialog.CreateSetListener
 		Intent myIntent = new Intent(this, ChordinatorPrefsActivity.class);
 		try {
 			//  Need to know when set prefs is finished so start for result
-			startActivityForResult(myIntent, SongUtils.SETOPTIONS_REQUEST);
+			prefsUpdateResultLauncher.launch(myIntent);
 		} catch (ActivityNotFoundException e) {
 			SongUtils.toast(this, "ChordinatorPrefsActivity not found");
 		}
@@ -621,24 +636,6 @@ AddSetDialog.CreateSetListener
 			SongUtils.toast(this, "SearchCriteria not found");
 		}
 	}
-
-	/* (non-Javadoc)
-	 * @see android.app.Activity#onActivityResult(int, int, android.content.Intent)
-	 */
-	@Override
-	public void onActivityResult(int requestCode, int resultCode, Intent data) {
-		Log.d(TAG, "HELLO onActivityResult-activity request=["+requestCode+"]result=["+resultCode+"]");
-		// If in dual pane mode, need to update the SongViewer
-		if( requestCode == SongUtils.SETOPTIONS_REQUEST){
-			Log.d(TAG, "HELLO onActivityResult2 ["+(mSongInView?"SONG":"NO SONG"));
-			if( songViewerFragment != null && mSongInView){
-				Log.d(TAG, "HELLO onActivityResult2");
-				songViewerFragment.reloadPreferences();
-			}
-			// TODO force re-draw somehow if color scheme has changed
-			Log.d(TAG, "HELLO onActivityResult3");
-		}
-	}
 	@Override
 	public void nextSong() {
 		// NOT applicable in Landscape
@@ -684,31 +681,116 @@ AddSetDialog.CreateSetListener
 		// SHOULD NEVER BE CALLED
 		Log.d(TAG, "HELLO createBrowserSet - WHY HAS THIS BEEN CALLED");
 	}
-    private void checkFileAccessPermission() {
-        // Required for API version 23 and above
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            android.util.Log.d(TAG, "checkFileAccessPermission 1");
-            if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                android.util.Log.d(TAG, "checkFileAccessPermission 2");
-                // Need to request permission from the user
-                String[] perms = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE};
-                requestPermissions(perms, REQUEST_CODE_WRITE_STORAGE_PERMISSION);
-            }
-        }
-    }
+	// NEW STORAGE PERMISSION REQUEST
+	private static final int STORAGE_PERMISSION_CODE = 100;
+	private void requestPermission(){
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
+			//Android is 11(R) or above
+			try {
+				Log.d(TAG, "HELLO requestPermission: try");
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-		if( requestCode == REQUEST_CODE_WRITE_STORAGE_PERMISSION && grantResults[0] == PERMISSION_DENIED){
-			// Handle user not allowing access.
-			Toast.makeText(this, getString(R.string.permission_required), Toast.LENGTH_SHORT).show();
+				Intent intent = new Intent();
+				intent.setAction(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+				Uri uri = Uri.fromParts("package", this.getPackageName(), null);
+				intent.setData(uri);
+				storageActivityResultLauncher.launch(intent);
+			}
+			catch (Exception e){
+				Log.e(TAG, "HELLO requestPermission: catch");
+				Intent intent = new Intent();
+				intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+				storageActivityResultLauncher.launch(intent);
+			}
+		}
+		else {
+			//Android is below 11(R)
+			ActivityCompat.requestPermissions(
+					this,
+					new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE},
+					STORAGE_PERMISSION_CODE
+			);
+		}
+	}
+
+	private final ActivityResultLauncher<Intent> storageActivityResultLauncher = registerForActivityResult(
+		new ActivityResultContracts.StartActivityForResult(),
+		new ActivityResultCallback<ActivityResult>() {
+			@Override
+			public void onActivityResult(ActivityResult result) {
+				Log.d(TAG, "onActivityResult: ");
+				//here we will handle the result of our intent
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
+					//Android is 11(R) or above
+					if (Environment.isExternalStorageManager()){
+						//Manage External Storage Permission is granted
+						Log.d(TAG, "onActivityResult: Manage External Storage Permission is granted");
+						// TODO
+						onFirstRun();
+					}
+					else{
+						//Manage External Storage Permission is denied
+						Log.d(TAG, "onActivityResult: Manage External Storage Permission is denied");
+						Toast.makeText(MainActivity.this, "Manage External Storage Permission is denied", Toast.LENGTH_SHORT).show();
+					}
+				}
+				else {
+					//Android is below 11(R) - IGNORE
+				}
+			}
+		}
+	);
+	private final ActivityResultLauncher<Intent> prefsUpdateResultLauncher = registerForActivityResult(
+			new ActivityResultContracts.StartActivityForResult(),
+			new ActivityResultCallback<ActivityResult>() {
+				@Override
+				public void onActivityResult(ActivityResult result) {
+					// Here we will handle the result of our intent
+					Log.d(TAG, "HELLO onActivityResult1 [" + (mSongInView ? "SONG" : "NO SONG")+"]");
+					if (songViewerFragment != null && mSongInView) {
+						Log.d(TAG, "HELLO onActivityResult2");
+						songViewerFragment.reloadPreferences();
+					}
+					// TODO force re-draw somehow if color scheme has changed
+					Log.d(TAG, "HELLO onActivityResult3");
+				}
+			}
+	);
+	public boolean checkPermission(){
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
+			//Android is 11(R) or above
+			return Environment.isExternalStorageManager();	// Does the app alrady have all files permission?
 		}
 		else{
-			// Only run this if they have given consent
-			onFirstRun();
-		}
-        Log.d(TAG, "onRequestPermissionsResult");
-    }
+			//Android is below 11(R)
+			int write = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+			int read = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
 
+			return write == PackageManager.PERMISSION_GRANTED && read == PackageManager.PERMISSION_GRANTED;
+		}
+	}
+	/*Handle permission request results*/
+	@Override
+	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+		if (requestCode == STORAGE_PERMISSION_CODE){
+			if (grantResults.length > 0){
+				//check each permission if granted or not
+				boolean write = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+				boolean read = grantResults[1] == PackageManager.PERMISSION_GRANTED;
+
+				if (write && read){
+					//External Storage permissions granted
+					Log.d(TAG, "HELLO onRequestPermissionsResult: External Storage permissions granted");
+					// Only run this if they have given consent
+					onFirstRun();
+				}
+				else{
+					//External Storage permission denied
+					Log.d(TAG, "HELLO onRequestPermissionsResult: External Storage permission denied");
+					// Handle user not allowing access.
+					Toast.makeText(this, getString(R.string.permission_required), Toast.LENGTH_SHORT).show();
+				}
+			}
+		}
+	}
 }
