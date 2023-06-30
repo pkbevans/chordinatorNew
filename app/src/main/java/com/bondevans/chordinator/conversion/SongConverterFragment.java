@@ -7,6 +7,7 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import androidx.fragment.app.DialogFragment;
@@ -20,7 +21,6 @@ import com.bondevans.chordinator.Log;
 import com.bondevans.chordinator.R;
 import com.bondevans.chordinator.SongFile;
 import com.bondevans.chordinator.SongUtils;
-import com.bondevans.chordinator.Statics;
 import com.bondevans.chordinator.db.DBUtils;
 import com.bondevans.chordinator.prefs.SongPrefs;
 
@@ -106,12 +106,12 @@ public class SongConverterFragment extends DialogFragment {
 					mSc.setArtist(artist);
 					// then convert intermediate to CHOPRO format...
 					// Use song Title as the file name
-					String newFileName = title+Statics.SONGFILEEXT;
-					if(convertedChoProOk(mSc, mFolder + newFileName)){
+					Uri newFileUri = Uri.fromParts("TODO", "TODO", "TODO");
+					if(convertedChoProOk(mSc, mFolder + newFileUri)){
 						// And add to the database if successful
 						Log.d(TAG, "HELLO - adding song to DB");
-						DBUtils.addSong(getActivity().getContentResolver(), mAuthority, mFolder, 
-								newFileName, title, artist, composer);
+						DBUtils.addSong(getActivity().getContentResolver(), mAuthority,
+								newFileUri, title, artist, composer);
 					}
 				}
 			})
@@ -125,14 +125,7 @@ public class SongConverterFragment extends DialogFragment {
 	}
 
 	boolean convertedChoProOk(SongConverter mSc, String newFileName) {
-		try {
-			File x = new File(newFileName);
-			SongUtils.writeFile(newFileName, mSc.createCSF().trim());
-			SongUtils.toast( getActivity(), x.getName()+ " "+ getString(R.string.saved));
-			return true;
-		} catch (ChordinatorException e) {
-			SongUtils.toast( getActivity(), e.getMessage());
-			return false;
-		}
+		// TODO - get file save location from user
+		return true;
 	}
 }

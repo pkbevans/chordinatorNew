@@ -15,8 +15,8 @@ android {
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.bondevans.chordinator.aug"
-        minSdk 16
+        applicationId "com.bondevans.chordinator.v2"
+        minSdk 19
         targetSdk 33
         versionCode 78
         versionName "7.0.1"

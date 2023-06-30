@@ -4,34 +4,19 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
-
-import androidx.activity.result.ActivityResult;
-import androidx.activity.result.ActivityResultCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
-import androidx.core.view.MenuItemCompat;
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.view.ActionMode;
-import androidx.appcompat.widget.SearchView;
-import androidx.appcompat.widget.Toolbar;
-
+import android.provider.OpenableColumns;
 import android.provider.Settings;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -41,7 +26,6 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.bondevans.chordinator.asynctask.ScanSongsActivity;
 import com.bondevans.chordinator.asynctask.SortOutFilePathsTask;
 import com.bondevans.chordinator.db.DBUtils;
 import com.bondevans.chordinator.dialogs.AddSetDialog;
@@ -56,9 +40,28 @@ import com.bondevans.chordinator.setlist.SetSongListActivity;
 import com.bondevans.chordinator.songlist.SongListFragment;
 import com.bondevans.chordinator.utils.Ute;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.Objects;
 
-import static androidx.core.content.PermissionChecker.PERMISSION_DENIED;
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.view.ActionMode;
+import androidx.appcompat.widget.SearchView;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
 public class MainActivity extends AppCompatActivity
 implements SongListFragment.OnSongSelectedListener,
@@ -68,7 +71,6 @@ AddSetDialog.CreateSetListener
 {
 	private static final String TAG = "MainActivity";
 	private static final int SHOWHELP_ID = Menu.FIRST + 1;
-	private static final int SCANSONGS_ID = Menu.FIRST + 2;
 	private static final int DELALL_ID = Menu.FIRST + 3;
 	private static final int PREFERENCES_ID = Menu.FIRST + 4;
 	private static final int SELECTSET_ID = Menu.FIRST + 5;
@@ -82,7 +84,7 @@ AddSetDialog.CreateSetListener
 	private static final int SEARCH_INTERNET_ID = Menu.FIRST + 18;
 	private static final int ABOUT_ID = Menu.FIRST + 19;
 	private static final int SEARCH_LOCAL_ID = Menu.FIRST + 25;
-    private static final int REQUEST_CODE_WRITE_STORAGE_PERMISSION = 4523;
+	private static final int IMPORTSONGS_ID = Menu.FIRST + 26;
 	private static final int OK = 0;
 	private static final int FAILED = -1;
 
@@ -96,6 +98,7 @@ AddSetDialog.CreateSetListener
 	private int mSortOrder = SongListFragment.LIST_MODE_TITLE;
     private SearchView searchDBView ;
 	private Menu mMenu = null;
+	public static final String FRAGTAG = "StorageClientFragment";
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -113,7 +116,7 @@ AddSetDialog.CreateSetListener
 			Log.d(TAG, "HELLO Permissions already granted...");
 		} else {
 			Log.d(TAG, "HELLO Permissions was not granted, request...");
-			requestPermission();
+//			requestPermission();
 		}
 		// See if they want split screen mode in Landscape
 		int listPaneSize;
@@ -186,7 +189,6 @@ AddSetDialog.CreateSetListener
 		setupActionBar();// This will be called many times
 //		onFirstRun();
 	}
-
 	@SuppressLint("NewApi")
 	@TargetApi(8)
 	private void logOsDetails() {
@@ -196,7 +198,6 @@ AddSetDialog.CreateSetListener
 		} catch (NameNotFoundException e) {
 			e.printStackTrace();
 		}
-
 		Log.d(TAG, "App Version:["+version+"]");
 		Log.d(TAG, "Device:["+Build.DEVICE+"]");
 		Log.d(TAG, "OS Version:["+Build.VERSION.SDK_INT+"]");
@@ -314,8 +315,8 @@ AddSetDialog.CreateSetListener
 		}
 	}
 	@Override
-	public void onSongSelected(long songId, String songPath) {
-		Log.d(TAG, "HELLO onSongSelected songPath=["+songPath+"]");
+	public void onSongSelected(long songId, Uri songUri) {
+		Log.d(TAG, "HELLO onSongSelected songPath=["+songUri+"]");
 		songViewerFragment = (SongViewerFragment) getSupportFragmentManager()
 				.findFragmentByTag(TAG_SONGVIEWER);
 		if (songViewerFragment == null || !songViewerFragment.isVisible()) {
@@ -324,7 +325,7 @@ AddSetDialog.CreateSetListener
 			Intent showSong = new Intent(this, SongViewerActivity.class);
 
 			long setId=0;
-			showSong.setData(Uri.fromFile(new File(songPath)));
+			showSong.setData(songUri);
 			showSong.putExtra(SongViewerActivity.INTENT_SONGID, songId);
 			showSong.putExtra(SongViewerActivity.INTENT_SETID, setId); //Make sure its a Long
 			showSong.putExtra(SongViewerActivity.INTENT_INSET, false);
@@ -333,11 +334,16 @@ AddSetDialog.CreateSetListener
 		}
 		else {
 			Log.d(TAG, "HELLO onSongSelected - found the fragment");
-			songViewerFragment.setSong(false, songId, songPath, null);
+			songViewerFragment.setSong(false, songId, songUri);
 			if(!mSongInView){
 				addShareButton();
 			}
 		}
+	}
+
+	@Override
+	public void browseFiles() {
+
 	}
 
 	/* (non-Javadoc)
@@ -350,20 +356,16 @@ AddSetDialog.CreateSetListener
 
 		menuItem = menu.add(0, SORTSONGS_ID, 0,"Sort By")
 		.setIcon(mColourScheme == LIGHT ? R.drawable.ic_sort_light : R.drawable.ic_sort_dark);
-		MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
-
-		menuItem = menu.add(0,BROWSE_ID, 0, getString(R.string.tabname_browse))
-		.setIcon(mColourScheme == LIGHT ? R.drawable.ai_browser_light : R.drawable.ai_browser_dark);
-		MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
+		menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
 		menuItem = menu.add(0,SELECTSET_ID, 0, getString(R.string.tabname_sets))
 		.setIcon(mColourScheme == LIGHT ? R.drawable.ic_setlists_light : R.drawable.ic_setlists_dark);
-		MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
+		menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
 		menuItem = menu.add(0,SEARCH_LOCAL_ID, 0, getString(R.string.search_songs))
 		.setIcon(mColourScheme == LIGHT ? R.drawable.ai_search_light:R.drawable.ai_search_dark);
-		MenuItemCompat.setActionView(menuItem, searchDBView);
-		MenuItemCompat.setOnActionExpandListener(menuItem, new MenuItemCompat.OnActionExpandListener() {
+		menuItem.setActionView(searchDBView);
+		menuItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
 			@Override
 			public boolean onMenuItemActionCollapse(MenuItem item) {
 				// Do something when collapsed
@@ -378,24 +380,19 @@ AddSetDialog.CreateSetListener
 				return true;  // Return true to expand action view
 			}
 		});
-		MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS | MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW);
+		menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS | MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW);
 
 		menuItem = menu.add(0,SEARCH_INTERNET_ID, 0, getString(R.string.search_songs))
 		.setIcon(mColourScheme == LIGHT ? R.drawable.ic_download_light:R.drawable.ic_download_dark);
-		MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_IF_ROOM);
-
-		menu.add(0, SCANSONGS_ID, 0, getString(R.string.scan_for_songs))
-		.setIcon(R.drawable.ic_menu_scan);
+		menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
 
 		menu.add(0, DELALL_ID, 0, getString(R.string.delete_all))
 		.setIcon(R.drawable.ic_menu_delall);
-
 		menu.add(0, PREFERENCES_ID, 0, getString(R.string.set_options))
 		.setIcon(R.drawable.ic_menu_preferences);
-
 		menu.add(0, SHOWHELP_ID, 0, getString(R.string.help))
 		.setIcon(R.drawable.ic_menu_help);
-
+		menu.add(0,IMPORTSONGS_ID, 0, getString(R.string.import_songs));
 		menu.add(0, ABOUT_ID, 0, getString(R.string.about));
 
 		return super.onCreateOptionsMenu(menu);
@@ -404,7 +401,7 @@ AddSetDialog.CreateSetListener
 	void addShareButton(){
 		MenuItem menuItem = mMenu.add(0, SHARESONG_ID, 0, getString(R.string.share_song))
 		.setIcon(R.drawable.ic_menu_share);
-		MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
+		menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 		mSongInView = true;
 	}
 
@@ -419,9 +416,6 @@ AddSetDialog.CreateSetListener
 		case SHOWHELP_ID:
 			showHelp();
 			break;
-		case SCANSONGS_ID:
-			scanForSongs();
-			break;
 		case DELALL_ID:
 			deleteSongs();
 			break;
@@ -435,8 +429,8 @@ AddSetDialog.CreateSetListener
 		case SORTSONGS_ID:
 			startSupportActionMode(new SongActionMode());
 			break;
-		case BROWSE_ID:
-			browseFiles();
+		case IMPORTSONGS_ID:
+			importSongs();
 			break;
 		case SHARESONG_ID:
 			songViewerFragment.shareSong();
@@ -450,17 +444,135 @@ AddSetDialog.CreateSetListener
 		}
 		return true;
 	}
-
-	public void browseFiles() {
-		Log.d(TAG, "HELLO launch SongBrowserActivity");
-		Intent myIntent = new Intent(this, SongBrowserActivity.class);
+	public void importSongs() {
+		// BEGIN_INCLUDE (use_open_document_intent)
+		// ACTION_OPEN_DOCUMENT is the intent to choose a file via the system's file browser.
+		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+		// Filter to only show results that can be "opened", such as a file (as opposed to a list
+		// of contacts or timezones)
+		intent.addCategory(Intent.CATEGORY_OPENABLE);
+		intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+		// Filter to show only images, using the image MIME data type.
+		// If one wanted to search for ogg vorbis files, the type would be "audio/ogg".
+		// To search for all documents available via installed storage providers, it would be
+		// "*/*".
+		intent.setType("*/*");
+		// END_INCLUDE (use_open_document_intent)
+		fileSelectedResultLauncher.launch(intent);
+	}
+	void viewSongFromUri(Uri uri){
+		Log.d(TAG, "HELLO Uri filename: " + getFileName(uri));
+		if(SongUtils.isBannedFileType(getFileName(uri))){
+			Log.d(TAG, "HELLO file type BANNED");
+			Toast.makeText(this, getString(R.string.banned_file_type), Toast.LENGTH_LONG).show();
+			return;
+		}
+		Intent myIntent = new Intent(this, SongViewerActivity.class);
+		myIntent.setData(uri);
+		myIntent.putExtra(SongViewerActivity.INTENT_INSET, false);
+		startActivity(myIntent);
+	}
+	public String getFileName(Uri uri) {
+		String result = null;
+		if (uri.getScheme().equals("content")) {
+			Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+			try {
+				if (cursor != null && cursor.moveToFirst()) {
+					int x=cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+					if(x>=0){
+						result = cursor.getString(x);
+					}else{
+						result = "";
+					}
+				}
+			} finally {
+				cursor.close();
+			}
+		}
+		if (result == null) {
+			result = uri.getPath();
+			int cut = result.lastIndexOf('/');
+			if (cut != -1) {
+				result = result.substring(cut + 1);
+			}
+		}
+		return result;
+	}
+	private final ActivityResultLauncher<Intent> fileSelectedResultLauncher = registerForActivityResult(
+			new ActivityResultContracts.StartActivityForResult(),
+			new ActivityResultCallback<ActivityResult>() {
+				@Override
+				public void onActivityResult(ActivityResult result) {
+					// Here we will handle the result of our intent
+					Log.d(TAG, "HELLO Importing song files [" + result.toString()+"]");
+					if (result.getResultCode() == RESULT_OK ) {
+						Uri uri;
+						Intent intent = result.getData();
+						ClipData clipData = intent.getClipData();
+						if(clipData == null) {
+							uri = intent.getData();
+							// Check for the freshest data.
+							getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+							viewSongFromUri(uri);
+						}else{
+							int x = clipData.getItemCount();
+							for(int i=0; i<x;i++){
+								uri = clipData.getItemAt(i).getUri();
+								Log.d(TAG, "HELLO Got item: "+ getFileName(uri));
+								// Just import the songs - dont view
+								getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+								importSongFile(uri);
+							}
+						}
+					}
+				}
+			}
+	);
+	void importSongFile(Uri uri){
+		SongFile sf = null;
 		try {
-			// Put the SET iD in the intent
-			startActivity(myIntent);
+			// Create a new SongFile - this loads up the contents of the file into the Song class
+			sf = new SongFile(this, uri);
+		} catch (ChordinatorException e) {
+			Log.d(TAG, "HELLO ERROR!!!!!:"+getFileName(uri));
+			return;
 		}
-		catch (ActivityNotFoundException e) {
-			SongUtils.toast( this,e.getMessage());
+		if(sf.hasTitle){
+			// Need to compare the correct path - i.e. the same that will be logged when a file is opened from the
+			// file browser - this is all handled in DBUtils.
+			Log.d(TAG, "HELLO IS chopro");
+			if(DBUtils.getSongIdFromUri(getContentResolver(), getString(R.string.authority), uri)==0){
+				Log.d(TAG, "HELLO adding to DB");
+				DBUtils.addSong(getContentResolver(),
+						getString(R.string.authority),
+						sf.getSongUri(),
+						sf.getTitleTitleCase(),
+						sf.getArtistTitleCase(),
+						sf.getComposerTitleCase());
+			}
+			else{
+				Toast.makeText(MainActivity.this, sf.getTitle()+ " ignored. Already in Chordinator", Toast.LENGTH_SHORT).show();
+				Log.d(TAG, "HELLO Already in DB");
+			}
 		}
+		else{
+			Log.d(TAG, "HELLO NOT chopro");
+			// TODO - convert to chopro
+		}
+	}
+
+	private String readTextFromUri(Uri uri) throws IOException {
+		StringBuilder stringBuilder = new StringBuilder();
+		try (InputStream inputStream =
+					 getContentResolver().openInputStream(uri);
+			 BufferedReader reader = new BufferedReader(
+					 new InputStreamReader(Objects.requireNonNull(inputStream)))) {
+			String line;
+			while ((line = reader.readLine()) != null) {
+				stringBuilder.append(line);
+			}
+		}
+		return stringBuilder.toString();
 	}
 	private void deleteSongs() {
 		Log.d(TAG, "HELLO deleteSongs");
@@ -503,20 +615,6 @@ AddSetDialog.CreateSetListener
 		LatestFragment newFragment = LatestFragment.newInstance(vers);
 		newFragment.show(getSupportFragmentManager(), "dialog");
     }
-
-    public void scanForSongs(){
-		Log.d(TAG, "HELLO scanForSongs");
-		Intent myIntent = new Intent(this, ScanSongsActivity.class);
-        myIntent.putExtra(ScanSongsActivity.INTENT_DOSETS, false);// Don't do sets
-		try {
-			// Put the SET iD in the intent
-			startActivity(myIntent);
-		}
-		catch (ActivityNotFoundException e) {
-			SongUtils.toast( this,e.getMessage());
-		}
-	}
-
 	private void setPreferences(){
 		Intent myIntent = new Intent(this, ChordinatorPrefsActivity.class);
 		try {
@@ -580,19 +678,19 @@ AddSetDialog.CreateSetListener
 			MenuItem menuItem;
 			menuItem = menu.add(0,TITLE_ID, 0, getString(R.string.title))
 					.setIcon(mSortOrder == SongListFragment.LIST_MODE_TITLE?R.drawable.title_icon_sel:R.drawable.title_icon);
-			MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
+			menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
 			menuItem = menu.add(0,ARTIST_ID, 0, getString(R.string.artist))
 					.setIcon(mSortOrder == SongListFragment.LIST_MODE_ARTIST?R.drawable.artist_icon_sel:R.drawable.artist_icon);
-			MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
+			menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
 			menuItem = menu.add(0,RECENT_ID, 0, getString(R.string.recent))
 					.setIcon(mSortOrder == SongListFragment.LIST_MODE_RECENT?R.drawable.recent_icon_sel:R.drawable.recent_icon);
-			MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
+			menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 
 			menuItem = menu.add(0,FAVOURITES_ID, 0, getString(R.string.favourites))
 					.setIcon(mSortOrder == SongListFragment.LIST_MODE_FAVS?R.drawable.fav_icon_sel:R.drawable.fav_icon);
-			MenuItemCompat.setShowAsAction(menuItem, MenuItemCompat.SHOW_AS_ACTION_ALWAYS);
+			menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 			return true;
 		}
 

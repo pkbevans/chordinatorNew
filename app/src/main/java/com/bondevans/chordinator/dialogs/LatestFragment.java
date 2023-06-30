@@ -12,8 +12,8 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 
 import com.bondevans.chordinator.Log;
-import com.bondevans.chordinator.R;
 import com.bondevans.chordinator.SongUtils;
+import com.bondevans.chordinator.R;
 
 import java.io.File;
 

@@ -4,13 +4,21 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.fragment.app.DialogFragment;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -25,7 +33,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 
-import com.bondevans.chordinator.ChordinatorException;
 import com.bondevans.chordinator.ColourScheme;
 import com.bondevans.chordinator.Log;
 import com.bondevans.chordinator.R;
@@ -38,6 +45,11 @@ import com.bondevans.chordinator.dialogs.GotSongDialog;
 import com.bondevans.chordinator.prefs.SongPrefs;
 import com.bondevans.chordinator.utils.Ute;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -211,31 +223,70 @@ public class SearchActivity extends AppCompatActivity implements GotSongDialog.G
 		mTask = new SearchPage();
 		mTask.execute(html);
 	}
-
+    boolean mIsCsf = false;
+    boolean mConvertCsf = false;
+    String mFileName = "";
+	String mSongText = "";
     @Override
     public void onGotSong(String fileName, String songText, boolean isChoPro, boolean convertChopro) {
-        // Save new song in chordinator folder...
-        String fullPath = mDownloadFolder + fileName;
-        try {
-            SongUtils.writeFile(fullPath, songText);
-            Log.d(TAG, "HELLO fileName=[" + fileName + "]");
-            SongUtils.toast( SearchActivity.this, fullPath + " "+ getString(R.string.saved));
-            // Create DB entry if its already in chopro format, otherwise convert to choPro if
-            // required and then add to DB
-            if(isChoPro){
-                DBUtils.addSong(getContentResolver(), getString(R.string.authority), mDownloadFolder,
-                        fileName, mTitle, mArtist, "");
-            }
-            else{
-                if(convertChopro){
-                    convertFileToChoPro(fileName);
-                }
-            }
-        } catch (ChordinatorException e) {
-            SongUtils.toast( SearchActivity.this, e.getMessage());
-        }
+        mIsCsf = isChoPro;
+        mConvertCsf = convertChopro;
+        mFileName = fileName;
+        mSongText = songText;
+        // Save new song in somewhere on device - TODO users chooses location
+        saveTextFile(fileName);
     }
-
+	private void saveTextFile(@NonNull String filename) {
+		// Launch file picker for user to choose where to store file
+		Intent saveTextFileIntent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+		saveTextFileIntent.addCategory(Intent.CATEGORY_OPENABLE);
+		saveTextFileIntent.setType("text/plain");
+		saveTextFileIntent.putExtra(
+				Intent.EXTRA_TITLE,
+				filename
+		);
+		fileSelectedResultLauncher.launch(saveTextFileIntent);
+	}
+	private final ActivityResultLauncher<Intent> fileSelectedResultLauncher = registerForActivityResult(
+			new ActivityResultContracts.StartActivityForResult(),
+			new ActivityResultCallback<ActivityResult>() {
+				@Override
+				public void onActivityResult(ActivityResult result) {
+					// User has chosen location for new file
+					Log.d(TAG, "HELLO onActivityResult [" + result.toString());
+					if (result.getResultCode() == RESULT_OK ) {
+						Uri uri;
+						Intent intent = result.getData();
+						uri = intent.getData();
+                        Log.d(TAG, "HELLO uri: "+uri.toString());
+						writeFile(uri, mSongText);
+                        SongUtils.toast( SearchActivity.this, mFileName + " "+ getString(R.string.saved));
+                        // Create DB entry if its already in chopro format, otherwise convert to choPro if
+                        // required and then add to DB
+                        if(mIsCsf){
+                            DBUtils.addSong(getContentResolver(), getString(R.string.authority), uri, mTitle, mArtist, "");
+                        }
+                        else{
+                            if(mConvertCsf){
+                                convertFileToChoPro(uri.toString());
+                            }
+                        }
+					}
+				}
+			}
+	);
+	private void writeFile(Uri uri, String text){
+		OutputStream outputStream;
+		try {
+			outputStream = getContentResolver().openOutputStream(uri);
+			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(outputStream));
+			bw.write(text);
+			bw.flush();
+			bw.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
     public class SearchPage extends AsyncTask<String, Void, String>{
 		String songText;
         private boolean mChopro;

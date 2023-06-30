@@ -9,7 +9,6 @@ import java.util.Set;
 import com.bondevans.chordinator.Log;
 import com.bondevans.chordinator.R;
 
-
 import android.content.Context;
 import android.os.Environment;
 import android.text.TextUtils;

@@ -26,7 +26,7 @@ public class SetList2 {
 	 */
 	public SetList2(ContentResolver cr, String authority, long setId){
 		String [] projection = {SongDB.COLUMN_SONG_ID, SongDB.COLUMN_TITLE, SongDB.COLUMN_ARTIST, SongDB.COLUMN_COMPOSER,
-				SongDB.COLUMN_FILE_PATH, SongDB.COLUMN_FILE_NAME, SongDB.COLUMN_SET_ORDER};
+				SongDB.COLUMN_FILE_URI, SongDB.COLUMN_SET_ORDER};
 		// create cursor to get all the set items in the correct order
 		Cursor setItemCursor = cr.query(
 				Uri.withAppendedPath(DBUtils.SETITEM(authority),
@@ -34,13 +34,13 @@ public class SetList2 {
 
 		// load them into the array
 		while(setItemCursor.moveToNext()){
-			Log.d(TAG, "HELLO adding song["+setItemCursor.getString(1)+"] for set["+setId+"] set_order=["+setItemCursor.getString(6)+"]");
+			Log.d(TAG, "HELLO adding song["+setItemCursor.getString(1)+"] for set["+setId+"] set_order=["+setItemCursor.getString(5)+"]");
 			mSongs.add(new SetSong(setItemCursor.getLong(0),    // id
 					setItemCursor.getString(1), // title
 					setItemCursor.getString(2), // artist
 					setItemCursor.getString(3), // composer
-					Ute.doPath(setItemCursor.getString(4),setItemCursor.getString(5)),  //filepath
-					setItemCursor.getInt(6)));  // set order
+					Uri.parse(setItemCursor.getString(4)),  //fileUri
+					setItemCursor.getInt(5)));  // set order
 		}
 		mCurrentSong = -1;	// Make sure that getNext/getPrev get the correct song 
 		// Close the query

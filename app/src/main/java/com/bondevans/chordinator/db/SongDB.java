@@ -16,8 +16,7 @@ public class SongDB extends SQLiteOpenHelper {
     public static final String TABLE_SETLIST = "setlist";
     public static final String TABLE_SETITEM = "setitem";
 	public static final String COLUMN_ID = "_id";
-	public static final String COLUMN_FILE_PATH = "file_path";
-	public static final String COLUMN_FILE_NAME = "file_name";
+	public static final String COLUMN_FILE_URI = "file_uri";
 	public static final String COLUMN_TITLE = "title";
 	public static final String COLUMN_ARTIST = "artist";
 	public static final String COLUMN_COMPOSER = "composer";
@@ -39,9 +38,8 @@ public class SongDB extends SQLiteOpenHelper {
 	private static String FOREIGN_KEYS_ON = "PRAGMA foreign_keys = ON;";
 	// Database creation sql statement
 	private static final String CREATE_SONG = "create table song "+
-			"("+COLUMN_ID+" integer primary key autoincrement, "+ 
-			COLUMN_FILE_PATH+" text not null, "+
-			COLUMN_FILE_NAME+" text not null, "+
+			"("+COLUMN_ID+" integer primary key autoincrement, "+
+			COLUMN_FILE_URI +" text not null, "+
 			COLUMN_TITLE+" text not null, "+
 			COLUMN_ARTIST+" text, "+
 			COLUMN_COMPOSER+" text,"+

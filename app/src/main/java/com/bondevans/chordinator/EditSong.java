@@ -5,6 +5,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -23,8 +24,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Toast;
 
-import com.bondevans.chordinator.prefs.SongPrefs;
 import com.bondevans.chordinator.utils.Ute;
+import com.bondevans.chordinator.R;
 
 public class EditSong extends AppCompatActivity {
 	private final static String TAG = "EditSong";
@@ -43,11 +44,10 @@ public class EditSong extends AppCompatActivity {
 	private static final String SAVE_FILE = "saveFile";
 
 	CABEditText mSongText; //KITKAT WORKAROUND
-	String mFilePath;
+	Uri mFileUri;
 	private boolean mTextChanged = false;
 	private TextWatcher textWatcher = new myTextWatcher();
 
-	@TargetApi(11)
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		setTheme(Ute.getColourScheme(this) == ColourScheme.LIGHT? R.style.Chordinator_Light_Theme_Theme: R.style.Chordinator_Dark_Theme_Theme);
@@ -62,12 +62,12 @@ public class EditSong extends AppCompatActivity {
 
         mSongText = (CABEditText) findViewById(R.id.song_text);
 		// Get the full file path to the chosen song from the Intent
-		mFilePath = getIntent().getStringExtra(getString(R.string.song_path));
+		mFileUri = getIntent().getData();
 		// Load up song and put it in the EditText
 		try {
 			SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
 			// ...and load up into a SongPrefs object, replacing any DOS-style CR/LF pairs with a single UNIX-style LF
-			mSongText.setText(SongUtils.loadFile(mFilePath, null, settings.getString(SongPrefs.PREF_KEY_DEFAULT_ENCODING, "")).replaceAll("\r\n", "\n"));
+			mSongText.setText(SongUtils.loadFile(this, mFileUri).replaceAll("\r\n", "\n"));
 		} catch (ChordinatorException e) {
 			errMsgToast(e.getMessage());
 			this.finish();
@@ -94,8 +94,8 @@ public class EditSong extends AppCompatActivity {
 	private void writeSong(){
 		//Write out to file in a separate thread
 		try {
-			Log.d(TAG,"saving file:"+mFilePath);
-			SongUtils.writeFile(mFilePath, mSongText.getText().toString());
+			Log.d(TAG,"saving file:"+ mFileUri);
+			SongUtils.writeFile( this, mFileUri, mSongText.getText().toString());
 		} catch (Exception e) {
 			errMsgToast(e.getMessage());
 		}

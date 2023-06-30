@@ -47,7 +47,7 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		boolean selected;
 
 		public CheckedSetSong(){
-			super(0,"","","","",0);
+			super(0,"","","",null,0);
 			selected = false;
 		}
 	}

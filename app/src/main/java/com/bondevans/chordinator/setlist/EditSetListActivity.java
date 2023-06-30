@@ -20,7 +20,7 @@ import com.bondevans.chordinator.R;
 import com.bondevans.chordinator.SongUtils;
 
 
-public class EditSetList extends ListActivity implements OnClickListener{
+public class EditSetListActivity extends ListActivity implements OnClickListener{
 	private final static String TAG = "EditSetList";
 	private String filePath;
 	private boolean loaded = false;
@@ -46,7 +46,7 @@ public class EditSetList extends ListActivity implements OnClickListener{
 			try {
 				setList = new SetList(null, new File(filePath));
 			} catch (Exception e) {
-				SongUtils.toast(EditSetList.this, "Can't open set list: "+ filePath);
+				SongUtils.toast(EditSetListActivity.this, "Can't open set list: "+ filePath);
 				e.printStackTrace();
 				return;
 			}

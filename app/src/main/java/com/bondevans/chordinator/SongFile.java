@@ -5,6 +5,8 @@ import java.io.FileDescriptor;
 
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
+import android.net.Uri;
 
 
 /**
@@ -14,9 +16,7 @@ import android.annotation.SuppressLint;
 public class SongFile {
 	private final static String TAG = "SongFile";
 	private Song	theSong=new Song();
-	private String	songFilePath = null;
-	private String	songFile = null;
-	private String	songPath = null;
+	private Uri	songUri = null;
 	public boolean hasTitle;
 
 	/**
@@ -27,16 +27,15 @@ public class SongFile {
 	 *@param defEncoding  @throws ChordinatorException
 	 */
 	public SongFile(String filePath, FileDescriptor fileDescriptor, String defEncoding) throws ChordinatorException{
-		songFilePath = filePath;
-		File x = new File(filePath);
-		songFile = x.getName();
-		songPath = x.getParent();
-//		Log.d(TAG, "HELLO File=["+songFile+ "] path=["+songPath+"]");
-		this.setSongDetails(SongUtils.loadFile(filePath, fileDescriptor, defEncoding));
+		// REMOVED
+	}
+	public SongFile(Activity activity, Uri uri) throws ChordinatorException{
+		songUri=uri;
+		this.setSongDetails(SongUtils.loadFile(activity, uri));
 	}
 
-	public void reloadSong(String defEncoding) throws ChordinatorException{
-		setSongDetails(SongUtils.loadFile(songFilePath, null, defEncoding));
+	public void reloadSong(Activity activity, String defEncoding) throws ChordinatorException{
+		setSongDetails(SongUtils.loadFile(activity,songUri));
 	}
 
 	/**
@@ -95,21 +94,9 @@ public class SongFile {
 	public String getComposer(){
 		return theSong.getComposer();
 	}
-
-	/**
-	 * @return the songFilePath
-	 */
-	public String getSongFilePath() {
-		return songFilePath;
+	public Uri getSongUri() {
+		return songUri;
 	}
-
-	/**
-	 * @param songFilePath the songFilePath to set
-	 */
-	public void setSongFilePath(String songFilePath) {
-		this.songFilePath = songFilePath;
-	}
-
 	/**
 	 * Sets up the Song details from the contents of the Song File
 	 * @param encContents
@@ -237,12 +224,6 @@ public class SongFile {
 	private void setFlags(String decContents) {
 		// TODO Auto-generated method stub
 		
-	}
-	public String getSongFile() {
-		return songFile;
-	}
-	public String getSongPath() {
-		return songPath;
 	}
 	public static final void doTests(){
 		convAngledBrackets(test1);

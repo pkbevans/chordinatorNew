@@ -1,22 +1,17 @@
 package com.bondevans.chordinator.db;
 
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
 
-
 import com.bondevans.chordinator.ChordinatorException;
 import com.bondevans.chordinator.Log;
-import com.bondevans.chordinator.R;
 import com.bondevans.chordinator.SongFile;
-import com.bondevans.chordinator.SongUtils;
-import com.bondevans.chordinator.utils.Ute;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class DBUtils {
 	private static final String TAG = "DBUtils";
@@ -33,25 +28,23 @@ public class DBUtils {
 
 	/**
 	 * Convenience method to add a song to the DB
-	 * @param songPath
-	 * @param songFile
+	 * @param songUri
 	 * @param title
 	 * @param artist
 	 * @param composer
 	 * @return
 	 */
-	public static Uri addSong(ContentResolver cr, String authority, String songPath, String songFile, String title, String artist, String composer){
+	public static Uri addSong(ContentResolver cr, String authority, Uri songUri, String title, String artist, String composer){
 		// This song isn't in the DB yet so add it in
 		ContentValues values = new ContentValues();
-		values.put(SongDB.COLUMN_FILE_PATH, doMnt(songPath));
-		values.put(SongDB.COLUMN_FILE_NAME, songFile);
+		values.put(SongDB.COLUMN_FILE_URI, songUri.toString());
 		SimpleDateFormat sdf = new SimpleDateFormat(SongDB.TIMESTAMP_FORMAT);
 		values.put(SongDB.COLUMN_LAST_ACCESS, sdf.format(new Date()));
 		values.put(SongDB.COLUMN_TITLE, SongFile.toTitleCase(title));
 		values.put(SongDB.COLUMN_ARTIST, SongFile.toTitleCase(SongFile.removeThe(artist)));
 		values.put(SongDB.COLUMN_COMPOSER, SongFile.toTitleCase(composer));
-		Log.d(TAG, "HELLO addSong: ["+values.getAsString(SongDB.COLUMN_TITLE)+"]["+values.getAsString(SongDB.COLUMN_FILE_PATH)+"]["+
-				values.getAsString(SongDB.COLUMN_FILE_NAME)+"]");
+		Log.d(TAG, "HELLO addSong: ["+values.getAsString(SongDB.COLUMN_TITLE)+"]["+
+				values.getAsString(SongDB.COLUMN_FILE_URI)+"]");
 		return cr.insert(SONG(authority), values);
 	}
 	
@@ -100,39 +93,19 @@ public class DBUtils {
 				whereClause,	// where clause
 				null);	// any args in the where clause
 	}
-
-	/**
-	 * DIRTY HACK!! replace any instance of "/mnt/sdcard/" with "/sdcard/" when either adding or looking up a song
-	 * 2.4.0 Not doing this any more
-	 * @param path
-	 * @return
-	 */
-	public static String doMnt(String path){
-		// remove any slashes on the end of the path
-		Log.d(TAG, "HELLO doMnt in["+path+"]");
-		if( path.endsWith("/")){
-			path = path.substring(0, path.length()-1);
-		}
-//		HACK REMOVED
-		Log.d(TAG, "HELLO doMnt out["+path+"]");
-		return path;
-	}
-	public static long getSongIdFromPath(ContentResolver cr, String authority, String filePath){
+	public static long getSongIdFromPath(ContentResolver cr, String authority, String songUri){
 		// separate filePath into Path+file
-		File tmp = new File(filePath);
-		String songFile = tmp.getName();
-		String songPath = tmp.getParent();
-		return getSongIdFromPath(cr, authority, songPath, songFile);
+		return getSongIdFromPath(cr, authority, songUri);
 	}
-	public static long getSongIdFromPath(ContentResolver cr, String authority, String songPath, String songFile){
-		Log.d(TAG, "HELLO getSongIdFromPath songPath=["+doMnt(songPath)+"] songFile=["+songFile+"]");
+	public static long getSongIdFromUri(ContentResolver cr, String authority, Uri songUri){
+		Log.d(TAG, "HELLO getSongIdFromUri songUri=["+songUri+"]");
 		long song_id=0; 
 		String[] projection = {SongDB.COLUMN_ID};
-		String[] whereArgs = {doMnt(songPath),songFile};
+		String[] whereArgs = {songUri.toString()};
 		Cursor songCursor = cr.query(
 				SONG(authority),
 				projection, 
-				SongDB.COLUMN_FILE_PATH + "=? and "+SongDB.COLUMN_FILE_NAME + "=?", 
+				SongDB.COLUMN_FILE_URI + "=?",
 				whereArgs, null);
 		if (songCursor.moveToFirst()) {
 			song_id = songCursor.getLong(0);
@@ -157,7 +130,7 @@ public class DBUtils {
 		Cursor setitem = cr.query(Uri.withAppendedPath(SETITEM(authority),
 				String.valueOf(set_id)), projection, SongDB.COLUMN_SONG_ID+"=?", selectionArgs, null);
 		if (setitem.moveToFirst()) {
-			Log.d(TAG, "HELLO - ["+setitem.getString(0)+"] ALDREADY IN SET");
+			Log.d(TAG, "HELLO - ["+setitem.getString(0)+"] ALREADY IN SET");
 			setitem.close();
 			throw new ChordinatorException("Song already in set");
 		}
@@ -197,42 +170,19 @@ public class DBUtils {
 		}
 		return ret;
 	}
-	public static int deleteSongByFile(ContentResolver cr, String authority, String filePath, String fileName){
-		String [] selectionArgs = new String [] {doMnt(filePath), fileName};
+	public static int deleteSongByFile(ContentResolver cr, String authority, String fileName){
+		String [] selectionArgs = new String [] {fileName};
 
 		int rows = cr.delete(
 				SONG(authority), 
-				SongDB.COLUMN_FILE_PATH+"=? and "+SongDB.COLUMN_FILE_NAME+"=?", 
+				SongDB.COLUMN_FILE_URI +"=?",
 				selectionArgs);
-		Log.d(TAG, "HELLO - Deleting Song: ["+doMnt(filePath)+"]["+fileName+"] rows=["+rows+"]");
+		Log.d(TAG, "HELLO - Deleting Song: ["+fileName+"] rows=["+rows+"]");
 		return rows;
 	}
 
 	public static void updateSongPaths(ContentResolver cr, String authority, String oldPath, String newPath) throws ChordinatorException{
-		Log.d(TAG, "HELLO updateSongPaths["+oldPath+"]["+newPath+"]");
-		long songId;
-		String title;
-		String path;
-		String [] projection = new String [] {	SongDB.TABLE_SONG+"."+SongDB.COLUMN_ID,
-												SongDB.TABLE_SONG+"."+SongDB.COLUMN_TITLE,
-												SongDB.TABLE_SONG+"."+SongDB.COLUMN_FILE_PATH};
-
-		Cursor allSongs = cr.query(SONG(authority), projection, null, null, null);
-		while(allSongs.moveToNext()){
-			// see if the current path contains "oldPath" ("/sdcard"), then replace it with "newPath" and update
-			ContentValues values = new ContentValues();//Values to update
-			songId = allSongs.getLong(0);
-			title = allSongs.getString(1);
-			Log.L(TAG, "TITLE", title);
-			path = allSongs.getString(2);
-			values.put(SongDB.COLUMN_FILE_PATH, doPath(path, oldPath, newPath ));
-
-			Log.d(TAG, "HELLO updateSong: ["+values.getAsString(SongDB.COLUMN_TITLE)+"]["+values.getAsString(SongDB.COLUMN_ARTIST)+"]");
-			cr.update(Uri.parse(SONG(authority)+"/"+songId),
-					values, 	// Columns to update
-					null,	// where clause
-					null);	// any args in the where clause
-		}
+		// DEPRECATED
 	}
 
 	public static String doPath(String path, String oldCard, String newCard ) {

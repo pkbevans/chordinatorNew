@@ -13,7 +13,6 @@ import com.bondevans.chordinator.SongUtils;
 import com.bondevans.chordinator.Statics;
 import com.bondevans.chordinator.db.DBUtils;
 import com.bondevans.chordinator.db.SongDB;
-import com.bondevans.chordinator.utils.Ute;
 
 import java.io.File;
 import java.util.Vector;
@@ -103,7 +102,7 @@ public class SetList {
 	private String getSong(ContentResolver cr, long songId) {
 		String ret = "";
 		// 	Get songFilePath+songFileName for given song_id
-		String [] projection = {SongDB.COLUMN_FILE_PATH, SongDB.COLUMN_FILE_NAME, SongDB.COLUMN_TITLE};
+		String [] projection = {SongDB.COLUMN_FILE_URI, SongDB.COLUMN_TITLE};
 		// create cursor to get all the set items in the correct order
 		Cursor songCursor = cr.query(
 				Uri.withAppendedPath(DBUtils.SONG(mAuthority),
@@ -111,7 +110,7 @@ public class SetList {
 
         if (songCursor != null) {
             if( songCursor.moveToFirst()){
-                ret = Ute.doPath(songCursor.getString(0),songCursor.getString(1));
+                ret = songCursor.getString(1);
             }
             else{
                 Log.e(TAG, "OOPS - Can't get song:["+songId+"]");

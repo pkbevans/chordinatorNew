@@ -215,5 +215,6 @@
     <string name="permission_required">Chordinator will not work without access to the internal storage</string>
     <string name="read_only_file">This file is read-only so some options are not available</string>
     <string name="cant_open_file">Unable to open this file</string>
+    <string name="import_songs">Import...</string>
 
 </resources>

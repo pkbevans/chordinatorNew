@@ -26,6 +26,7 @@ import android.widget.Toast;
 import com.bondevans.chordinator.grids.ChordShapePainter;
 import com.bondevans.chordinator.grids.ChordShapeProvider;
 import com.bondevans.chordinator.prefs.SongPrefs;
+import com.bondevans.chordinator.R;
 
 import java.util.ArrayList;
 

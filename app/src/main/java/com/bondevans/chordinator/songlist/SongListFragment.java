@@ -1,6 +1,5 @@
 package com.bondevans.chordinator.songlist;
 
-import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.Context;
@@ -10,13 +9,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.ListFragment;
-import androidx.loader.app.LoaderManager;
-import androidx.loader.content.CursorLoader;
-import androidx.core.content.FileProvider;
-import androidx.loader.content.Loader;
-import androidx.cursoradapter.widget.SimpleCursorAdapter;
+import android.provider.OpenableColumns;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.LayoutInflater;
@@ -35,7 +28,6 @@ import com.bondevans.chordinator.ChordinatorException;
 import com.bondevans.chordinator.ColourScheme;
 import com.bondevans.chordinator.EditSong;
 import com.bondevans.chordinator.Log;
-import com.bondevans.chordinator.R;
 import com.bondevans.chordinator.SongFile;
 import com.bondevans.chordinator.SongUtils;
 import com.bondevans.chordinator.db.DBUtils;
@@ -45,9 +37,14 @@ import com.bondevans.chordinator.dialogs.SetListDialog;
 import com.bondevans.chordinator.dialogs.SongDetailsDialog;
 import com.bondevans.chordinator.prefs.SongPrefs;
 import com.bondevans.chordinator.utils.Ute;
+import com.bondevans.chordinator.R;
 
-
-import java.io.File;
+import androidx.cursoradapter.widget.SimpleCursorAdapter;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.ListFragment;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.CursorLoader;
+import androidx.loader.content.Loader;
 
 public class SongListFragment extends ListFragment implements
 LoaderManager.LoaderCallbacks<Cursor> {
@@ -56,13 +53,11 @@ LoaderManager.LoaderCallbacks<Cursor> {
 	private static OnSongSelectedListener songSelectedListener;
 	private static final int SONG_LIST_LOADER = 0x01;
 	private String mProjection[] = { 	SongDB.COLUMN_ID, 
-			SongDB.COLUMN_FILE_PATH, 
-			SongDB.COLUMN_FILE_NAME,
+			SongDB.COLUMN_FILE_URI,
 			SongDB.COLUMN_TITLE,
 			SongDB.COLUMN_FAV};
 	private long 	mSongId;
-	private String	mFilePath;
-	private String	mFileName;
+	private Uri mFileUri;
 	private String	mTitle;
 	private SongCursorAdapter adapter;
 	public final static int LIST_MODE_TITLE=0;
@@ -166,7 +161,7 @@ LoaderManager.LoaderCallbacks<Cursor> {
 	}
 
 	public interface OnSongSelectedListener {
-		void onSongSelected(long songId, String songPath);
+		void onSongSelected(long songId, Uri songUri);
 		void browseFiles();
 	}
 
@@ -179,11 +174,11 @@ LoaderManager.LoaderCallbacks<Cursor> {
 	private void viewSong(long id){
 		Log.d(TAG, "HELLO viewSong");
 		getSongFromId(id);
-		songSelectedListener.onSongSelected( mSongId, Ute.doPath(mFilePath,mFileName) );
+		songSelectedListener.onSongSelected( mSongId, mFileUri);
 	}
 
 	@Override
-	public void onAttach(Activity activity) {
+	public void onAttach(Context activity) {
 		super.onAttach(activity);
 		try {
 			songSelectedListener = (OnSongSelectedListener) activity;
@@ -345,11 +340,7 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		Log.d(TAG, "Browse to: "+song_id);
 		getSongFromId(song_id);
 		// Set current directory to the filepath of the selected song
-		SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(getActivity());
-
-		SharedPreferences.Editor editor = settings.edit();
-		editor.putString(SongPrefs.PREF_KEY_SONGDIR, mFilePath);
-		editor.apply();
+		// TODO
 		// Switch to browse mode
 		songSelectedListener.browseFiles();
 	}
@@ -357,7 +348,7 @@ LoaderManager.LoaderCallbacks<Cursor> {
 	private void showDetails(long song_id) {
 		Log.d(TAG, "Show details: "+song_id);
 		getSongFromId(song_id);
-		DialogFragment newFragment = SongDetailsDialog.newInstance(Ute.doPath(mFilePath, mFileName));
+		DialogFragment newFragment = SongDetailsDialog.newInstance(mFileUri.toString());
 		newFragment.show(getFragmentManager(), "dialog");
 	}
 
@@ -367,31 +358,54 @@ LoaderManager.LoaderCallbacks<Cursor> {
 
 		SongFile mSf;
 		try {
-			mSf = new SongFile(Ute.doPath(mFilePath, mFileName), null, settings.getString(SongPrefs.PREF_KEY_DEFAULT_ENCODING, ""));
+			mSf = new SongFile(getActivity(), mFileUri);
 		} catch (ChordinatorException e1) {
 			e1.printStackTrace();
 			SongUtils.toast(getActivity(), e1.getMessage());
 			return;
 		}
-		File aFile = new File(mSf.getSongFilePath());
 		Intent theIntent = new Intent(Intent.ACTION_SEND);
 		theIntent.setType("text/plain");
 		// the formatted text.
 		theIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-		Uri fileURI= FileProvider.getUriForFile(getActivity(),
-				getString(R.string.authority)+".provider",
-				aFile);
+		Uri fileURI= mSf.getSongUri();
 		Log.d(TAG, "Sharing. Authority="+getString(R.string.authority));
-		theIntent.putExtra(Intent.EXTRA_STREAM, fileURI);
+		theIntent.setData(fileURI);
 		theIntent.putExtra(Intent.EXTRA_TEXT, mSf.getSong().getSongText());
 		//next line specific to email attachments
-		theIntent.putExtra(Intent.EXTRA_SUBJECT, "Sending " + aFile.getName());
+		theIntent.putExtra(Intent.EXTRA_SUBJECT, "Sending " + getFileName(fileURI));
 		try {
 			startActivity(Intent.createChooser(theIntent, "Share With...."));
 		}
 		catch (Exception e) {
 			Log.d(TAG, "Oops: "+e.getMessage());
 		}
+	}
+	public String getFileName(Uri uri) {
+		String result = null;
+		if (uri.getScheme().equals("content")) {
+			Cursor cursor = getActivity().getContentResolver().query(uri, null, null, null, null);
+			try {
+				if (cursor != null && cursor.moveToFirst()) {
+					int x=cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+					if(x>=0){
+						result = cursor.getString(x);
+					}else{
+						result = "";
+					}
+				}
+			} finally {
+				cursor.close();
+			}
+		}
+		if (result == null) {
+			result = uri.getPath();
+			int cut = result.lastIndexOf('/');
+			if (cut != -1) {
+				result = result.substring(cut + 1);
+			}
+		}
+		return result;
 	}
 
 	private void addSongToSet(long song_id) {
@@ -408,7 +422,7 @@ LoaderManager.LoaderCallbacks<Cursor> {
     private void doDeleteX(long songId){
 			Log.d(TAG, "doDelete: "+songId);
 			getSongFromId(songId);
-			DialogFragment newFragment = DeleteSongDialog.newInstance(getString(R.string.authority), songId, mTitle, Ute.doPath(mFilePath, mFileName));
+			DialogFragment newFragment = DeleteSongDialog.newInstance(getString(R.string.authority), songId, mTitle, mFileUri.toString());
 			newFragment.show(getFragmentManager(), "dialog");
 	}
 
@@ -418,14 +432,12 @@ LoaderManager.LoaderCallbacks<Cursor> {
 						String.valueOf(id)), mProjection, null, null, null);
 		if (songCursor.moveToFirst()) {
 			mSongId = songCursor.getLong(0);
-			mFilePath = songCursor.getString(1);
-			mFileName = songCursor.getString(2);
-			mTitle = songCursor.getString(3);
+			mFileUri = Uri.parse(songCursor.getString(1));
+			mTitle = songCursor.getString(2);
 		}
 		else{
 			mSongId = 0;
-			mFilePath = "";
-			mFileName = "";
+			mFileUri = null;
 			mTitle = "";
 		}
 		songCursor.close();
@@ -441,7 +453,7 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		Intent myIntent = new Intent(getActivity(), EditSong.class);
 		try {
 			// Put the path to the song file in the intent
-			myIntent.putExtra(getString(R.string.song_path), Ute.doPath(mFilePath, mFileName));
+			myIntent.putExtra(getString(R.string.song_path), mFileUri);
 			startActivity(myIntent);
 		} 
 		catch (ActivityNotFoundException e) {

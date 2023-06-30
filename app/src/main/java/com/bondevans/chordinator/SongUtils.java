@@ -2,14 +2,24 @@ package com.bondevans.chordinator;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.util.Objects;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
+import android.net.Uri;
 import android.os.Environment;
 
 import android.widget.Toast;
@@ -23,7 +33,6 @@ public class SongUtils {
     static final int	SONGACTIVITY_REQUEST = 5;
 	private static final String TAG = "SongUtils";
 	private final static int FILE_TOO_BIG = 15000;
-
 	/**
 	 * Empty Constructor
 	 */
@@ -103,7 +112,28 @@ public class SongUtils {
 			return defaultRet;
 		}
 	}
-
+	public static String loadFile(Activity activity, Uri uri) throws ChordinatorException {
+		StringBuilder stringBuilder = new StringBuilder();
+		try (InputStream inputStream =
+					 activity.getContentResolver().openInputStream(uri);
+			 BufferedReader reader = new BufferedReader(
+					 new InputStreamReader(Objects.requireNonNull(inputStream)))) {
+			if(inputStream.available()>FILE_TOO_BIG){
+				throw new ChordinatorException("ERROR: file size too big");
+			}
+			String line;
+			while ((line = reader.readLine()) != null) {
+				stringBuilder.append(line);
+			}
+		} catch (SecurityException e) {
+			throw new ChordinatorException("ERROR opening file: "+ e.getMessage());
+		} catch (FileNotFoundException e) {
+			throw new ChordinatorException("ERROR opening file: "+ e.getMessage());
+		} catch (IOException e) {
+			throw new ChordinatorException("ERROR opening file: "+ e.getMessage());
+		}
+		return stringBuilder.toString();
+	}
 	/**
 	 * LoadFile - Load a complete song file into Contents
 	 */
@@ -122,7 +152,7 @@ public class SongUtils {
 			}
 			length=2048;
 			int i=0;
-			String enc = "";
+			String enc = "UTF-8";
 			while( bytesRead>=0){
 				if((bytesRead = buf.read(buffer, 0, length))>=0 ){
 					// Have a look at the 1st 3 bytes. If these indicate UTF-8 then use UTF-8.
@@ -188,6 +218,23 @@ public class SongUtils {
 			throw new ChordinatorException("An error has ocurred writing: ["+fileName+"]:"+ e.getMessage());
 		}
 	}
+	public final static void writeFile( Activity activity, Uri fileUri, String contents) throws ChordinatorException{
+		OutputStream outputStream;
+		Log.d(TAG,"Writing: " + fileUri);
+		byte [] utfHeader = {(byte)0xef,(byte)0xbb,(byte)0xbf};
+		try {
+			outputStream = activity.getContentResolver().openOutputStream(fileUri);
+			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(outputStream));
+			bw.write(contents);
+			bw.flush();
+			bw.close();
+		}
+		catch (IOException e) {
+			Log.e(TAG, "WriteFile failed: "+e.getMessage());
+			e.printStackTrace();
+			throw new ChordinatorException("An error has occurred writing: ["+fileUri+"]:"+ e.getMessage());
+		}
+	}
 	public static void toast(Context context, String msg){
 		Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
 	}
@@ -218,9 +265,7 @@ public class SongUtils {
 	}
 	public static String getFileEncoding(byte [] buffer, String defEncoding)
 	{
-
 		String enc;
-
 		// IF default encoding specified use it other wise default is ISO-8859-1
 		// However use UTF 8 if we identify the UTF header
 		if(defEncoding.length()>0){

@@ -7,6 +7,7 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 
 import androidx.fragment.app.ListFragment;
@@ -146,7 +147,7 @@ public class EditSetListFragment extends ListFragment {
 			public void onItemClick(AdapterView<?> arg0, View v, int position,
 			                        long id) {
 				SetSong song = mAdapter.getItem(position);
-				songSelectedListener.onSongSelected(song.id, song.filePath);
+				songSelectedListener.onSongSelected(song.id, song.fileUri);
 
 			}
 		});
@@ -345,7 +346,7 @@ public class EditSetListFragment extends ListFragment {
 		Intent myIntent = new Intent(getActivity(), EditSong.class);
 		try {
 			// Put the path to the song file in the intent
-			myIntent.putExtra(getString(R.string.song_path), song.filePath);
+			myIntent.setData(song.fileUri);
 			startActivity(myIntent);
 		}
 		catch (ActivityNotFoundException e) {

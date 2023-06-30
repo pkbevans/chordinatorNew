@@ -2,7 +2,6 @@ package com.bondevans.chordinator;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -45,13 +44,10 @@ import com.bondevans.chordinator.grids.ChordShapeImage;
 import com.bondevans.chordinator.grids.ChordShapeProvider;
 import com.bondevans.chordinator.prefs.SongPrefs;
 
-import java.io.File;
-import java.io.FileDescriptor;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 import androidx.activity.result.ActivityResult;
-import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 
 import static com.bondevans.chordinator.Statics.CHORDINATOR_DIR;
@@ -113,7 +109,7 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 	}
 
 	@Override
-	public void onAttach(Activity activity) {
+	public void onAttach(Context activity) {
 		Log.d(TAG, "HELLO onAttach");
 		super.onAttach(activity);
 		try {
@@ -219,12 +215,9 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 		}
 	}
 
-	public void setSong(boolean inSetList, long songId, String fileName, FileDescriptor mFileDescriptor){
-		// Readonly if opening content from FileDescriptor
-		mReadOnly = mFileDescriptor != null;
+	public void setSong(boolean inSetList, long songId, Uri uri){
 		// Save any settings for previous song, if appropriate
 		savePreviousSongSettings();
-
 		// See if we are in a set list - if so set up the prev and next buttons
 		mInSetList = inSetList;
 		// See if we got the rowID of the Song record
@@ -232,15 +225,10 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 		// Get the full file path to the chosen song from the Intent
 		try {
 			// Create a new SongFile - this loads up the contents of the file into the Song class
-			Log.d(TAG, "HELLO setSong ["+fileName+"]");
-			if(SongUtils.isBannedFileType(fileName)){
-				Log.d(TAG, "HELLO onCreate BANNED");
-				throw new ChordinatorException(getString(R.string.banned_file_type));
-			}
-			mSf = new SongFile(fileName, mFileDescriptor, mPrefs.getDefaultEncoding());
+			Log.d(TAG, "HELLO setSong ["+uri.toString()+"]");
+			mSf = new SongFile(getActivity(), uri);
 		} catch (ChordinatorException e) {
 			errMsgToast(e.getMessage());
-			//			this.finish();
 			return;
 		}
 
@@ -254,7 +242,7 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 			trdownButton.setVisibility(View.VISIBLE);
 		}
 		// Check whether song is in the Db and add if not (dont bother if its just an orientation change (or if we are opening from fileDescriptor)
-		if( mSavedScrollSpeed == -1 && mFileDescriptor == null){// TODO Shouldnt be using this flag
+		if( mSavedScrollSpeed == -1 ){//&& fileDescriptor == null){// TODO Shouldnt be using this flag
 			UpdateSongDB();
 		}
 		// Create a new Song Canvas and load up the chosen song
@@ -363,22 +351,22 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 		}
 		Log.d(TAG,"HELLO onContextItemSelected");
 		if (item.getItemId() == R.id.edit) {
-			editSong(mSf.getSongFilePath());
+			editSong(mSf.getSongUri());
 			return true;
 		} else if (item.getItemId() == R.id.save_trans) {
-			saveTransposedSong(mSf.getSongFilePath());
+			saveTransposedSong(mSf.getSongUri());
 			return true;
 		} else if (item.getItemId() == R.id.orig_trans) {
 			revertToOriginalKey();
 			return true;
 		} else if (item.getItemId() == R.id.save_text) {
-			saveSongToText(mSf.getSongFilePath());
+			saveSongToText(mSf.getSongUri());
 			return true;
 		} else if (item.getItemId() == R.id.save_html) {
-			saveSongToHTML(mSf.getSongFilePath(), true);
+			saveSongToHTML(mSf.getSongUri(), true);
 			return true;
 		} else if (item.getItemId() == R.id.print) {
-			printSong(mSf.getSongFilePath(), mSf.hasTitle?mSf.getTitle():mSf.getSongFile(), false);
+			printSong(mSf.getSongUri(), mSf.hasTitle?mSf.getTitle():"UNKNOWN", false);
 			return true;
 //		} else if (item.getItemId() == R.id.print_inline_chords) {
 //			printSong(mSf.getSongFilePath(), mSf.hasTitle?mSf.getTitle():mSf.getSongFile(), true);
@@ -497,12 +485,12 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 	/**
 	 * Edit the current Song
 	 */
-	private void editSong(String songPath) {
+	private void editSong(Uri songUri) {
 		// Open the file with the EditSong Activity
 		Intent myIntent = new Intent(getActivity(),	EditSong.class);
 		try {
 			// Put the path to the song file in the intent
-			myIntent.putExtra(getString(R.string.song_path), songPath);
+			myIntent.setData(songUri);
 			SongViewerActivity activity = (SongViewerActivity) getActivity();
 			activity.editSongResultLauncher.launch(myIntent);
 		}
@@ -519,7 +507,7 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 		Log.d(TAG, "HELLO onActivityResult 1");
 		//The song has been saved so re-load the songfile
 		try {
-			mSf.reloadSong(mPrefs.getDefaultEncoding());
+			mSf.reloadSong(getActivity(), mPrefs.getDefaultEncoding());
 			mSongCanvas.setSong(mSf.getSong());
 			Log.d(TAG, "HELLO onActivityResult 2");
 		} catch (ChordinatorException e) {
@@ -528,18 +516,15 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 	}
 	public void shareSong(){
 		if(mSf != null){
-			File aFile = new File(mSf.getSongFilePath());
+			Uri aFile = mSf.getSongUri();
 			Intent theIntent = new Intent(Intent.ACTION_SEND);
 			theIntent.setType("text/plain");
 			// the formatted text.
 			theIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            Uri fileURI= FileProvider.getUriForFile(getActivity(),
-					getString(R.string.authority)+".provider",
-                    aFile);
-			theIntent.putExtra(Intent.EXTRA_STREAM, fileURI);
+			theIntent.putExtra(Intent.EXTRA_STREAM, aFile);
 			theIntent.putExtra(Intent.EXTRA_TEXT, mSf.getSong().getSongText());
 			//next line specific to email attachments
-			theIntent.putExtra(Intent.EXTRA_SUBJECT, "Sending " + aFile.getName());
+			theIntent.putExtra(Intent.EXTRA_SUBJECT, "Sending " + aFile.toString());
 			try {
 				startActivity(Intent.createChooser(theIntent, "Share With...."));
 			}
@@ -549,18 +534,18 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 		}
 	}
 
-	private void saveTransposedSong(final String filePath){
+	private void saveTransposedSong(final Uri fileUri){
 		//		new Thread(new Runnable(){
 		//			public void run(){
 		// load up file and transpose the whole lot
 		String newSong;
 		try {
-			newSong = Transpose.song(SongUtils.loadFile(filePath, null, mPrefs.getDefaultEncoding()),
+			newSong = Transpose.song(SongUtils.loadFile(getActivity(), fileUri),
 					mSongCanvas.getTranspose());
 			// then save it back to same file name
-			SongUtils.writeFile(filePath, newSong);
+			SongUtils.writeFile(fileUri.toString(), newSong);
 			// and reload the song
-			mSf.reloadSong(mPrefs.getDefaultEncoding());
+			mSf.reloadSong(getActivity(), mPrefs.getDefaultEncoding());
 			mSongCanvas.setSong(mSf.getSong());
 			mSongCanvas.setTranspose(0);
 			// Remove the preference (ignore any errors)
@@ -568,20 +553,18 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 		} catch (ChordinatorException e) {
 			errMsgToast(e.getMessage());
 		}
-		//			}
-		//		}).start();
 	}
 
 	private void revertToOriginalKey(){
 		mSongCanvas.setTranspose(0);
 		mSongCanvas.doInvalidate();
 	}
-	private void saveSongToText(final String filePath){
+	private void saveSongToText(final Uri fileUri){
 		boolean isnew=true;
 		if(isnew){
 			Log.d(TAG, "HELLO - new asynk save as text");
 			SaveSongAsTextTask task = new SaveSongAsTextTask();
-			task.execute(new String[] {filePath,mSongCanvas.getTranspose()+""});
+			task.execute(new String[] {fileUri.toString(),mSongCanvas.getTranspose()+""});
 		}
 		else{
 			// load up file and transpose the whole lot
@@ -589,7 +572,7 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 				SongTextFormatter stf = new SongTextFormatter(mSf.getSong(), mSongCanvas.getTranspose());
 				stf.formatSong(MAXLINE_LEN);
 				// then save it back to same file name but with extension swapped for .txt
-				String newFileName = SongUtils.swapSuffix(filePath, ".txt");
+				String newFileName = SongUtils.swapSuffix(fileUri.toString(), ".txt");
 
 				SongUtils.writeFile(newFileName, stf.getFormattedSong());
 				errMsgToast("Song " + mSf.getSong().getTitle()+" saved to:\n" + newFileName);
@@ -670,7 +653,7 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 	@SuppressWarnings("unused")
 	private WebView mWebView;	// This is intentional
 	private String mHtmlDocument;
-	private void printSong(String filePath, final String title, boolean inlineChords) {
+	private void printSong(Uri fileUri, final String title, boolean inlineChords) {
 		Log.d(TAG, "HELLO Printing: "+title);
 	    // Create a WebView object specifically for printing
 	    WebView webView = new WebView(getActivity());
@@ -688,7 +671,7 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 	    });
 
 	    // Generate an HTML document on the fly:
-	    mHtmlDocument = convertSongToHtml(filePath, inlineChords);
+	    mHtmlDocument = convertSongToHtml(fileUri.toString(), inlineChords);
 	    Log.d(TAG, "HELLO HTML: ["+mHtmlDocument+"]");
 	    webView.loadDataWithBaseURL(null, mHtmlDocument, "text/HTML", "UTF-8", null);
 
@@ -718,7 +701,7 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 		// load up file and transpose the whole lot
 		if(!mSf.hasTitle){
 			// If the song is a text file then needs different handling - no title so use file name
-			stf = new TextSongHTMLFormatter(mSf.getSong(), mSongCanvas.getTranspose(), mSf.getSongFile());
+			stf = new TextSongHTMLFormatter(mSf.getSong(), mSongCanvas.getTranspose(), "TODO-file name");
 		}
 		else{
 			if(inlineChords){
@@ -753,11 +736,11 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 	    // Save the job object for later status checking
 //	    mPrintJobs.add(printJob); // Don't need this (probably)
 	}
-	private void saveSongToHTML(final String filePath, boolean inlineChords){
+	private void saveSongToHTML(final Uri fileUri, boolean inlineChords){
 		try {
 			// Save converted song back to same file name +.html
-			SongUtils.writeFile(SongUtils.swapSuffix(filePath, ".html"), convertSongToHtml(filePath, inlineChords));
-			errMsgToast("Song " + mSf.getSong().getTitle()+" saved to:\n" + SongUtils.swapSuffix(filePath, ".html"));
+			SongUtils.writeFile(SongUtils.swapSuffix(fileUri.toString(), ".html"), convertSongToHtml(fileUri.toString(), inlineChords));
+			errMsgToast("Song " + mSf.getSong().getTitle()+" saved to:\n" + SongUtils.swapSuffix(fileUri.toString(), ".html"));
 		} catch (ChordinatorException e) {
 			errMsgToast(e.getMessage());
 		}
@@ -981,8 +964,8 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 		protected String doInBackground(String... args) {
 			String response = "";
 			if (mSongId != 0 || 
-					(mSongId = DBUtils.getSongIdFromPath(getActivity().getContentResolver(), getString(R.string.authority),
-							mSf.getSongPath(),mSf.getSongFile())) != 0) {
+					(mSongId = DBUtils.getSongIdFromUri(getActivity().getContentResolver(), getString(R.string.authority),
+							mSf.getSongUri())) != 0) {
 				DBUtils.updateSong(getActivity().getContentResolver(), getString(R.string.authority), mSongId, mSf.getTitle(), mSf.getArtist(), mSf.getComposer());
 			}
 			else{
@@ -990,8 +973,8 @@ public class SongViewerFragment extends Fragment implements OnClickListener{
 				// Only add to the DB if there is a {title} tag
 				if(mSf.hasTitle){
 					// This song isn't in the DB yet so add it in
-					DBUtils.addSong(getActivity().getContentResolver(), getString(R.string.authority), mSf.getSongPath(),
-							mSf.getSongFile(), mSf.getTitle(), mSf.getArtist(), mSf.getComposer());
+					DBUtils.addSong(getActivity().getContentResolver(), getString(R.string.authority), mSf.getSongUri(),
+							mSf.getTitle(), mSf.getArtist(), mSf.getComposer());
 				}
 				else{
 					Log.d(TAG, "HELLO NO TITLE");

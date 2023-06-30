@@ -1,7 +1,7 @@
 package com.bondevans.chordinator.db;
 
 public class SongProvider extends ChordinatorSongProvider {
-	private static final String AUTHORITY = "com.bondevans.chordinator";
+	private static final String AUTHORITY = "com.bondevans.chordinator.v2";
 
 	@Override
 	public void addUris(){

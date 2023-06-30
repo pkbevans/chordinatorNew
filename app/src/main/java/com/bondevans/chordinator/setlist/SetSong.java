@@ -1,26 +1,28 @@
 package com.bondevans.chordinator.setlist;
 
+import android.net.Uri;
+
 public class SetSong{
     // v6.0.0 - Removed Parcelable  - not used.
 	public long id;
 	public String title;
 	public String artist;
 	public String composer;
-	public String filePath;
+	public Uri fileUri;
 	public int setOrder;
 
-	public SetSong(long id, String title, String filePath, int setOrder){
+	public SetSong(long id, String title, Uri fileUri, int setOrder){
 		this.id = id;
 		this.title = title;
-		this.filePath = filePath;
+		this.fileUri = fileUri;
 		this.setOrder = setOrder;
 	}
-	public SetSong(long id, String title, String artist, String composer, String filePath, int setOrder){
+	public SetSong(long id, String title, String artist, String composer, Uri fileUri, int setOrder){
 		this.id = id;
 		this.title = title;
 		this.artist = artist;
 		this.composer = composer;
-		this.filePath = filePath;
+		this.fileUri = fileUri;
 		this.setOrder = setOrder;
 	}
 

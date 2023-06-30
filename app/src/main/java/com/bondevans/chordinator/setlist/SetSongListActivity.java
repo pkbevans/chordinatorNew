@@ -16,7 +16,6 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.core.view.MenuItemCompat;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
@@ -223,8 +222,8 @@ AddSongsToSetFragment.OnSongsAddedListener
 	}
 
 	@Override
-	public void onSongSelected(long songId, String songPath) {
-		Log.d(TAG, "HELLO onSongSelected songPath=["+songPath+"]");
+	public void onSongSelected(long songId, Uri songUri) {
+		Log.d(TAG, "HELLO onSongSelected songPath=["+songUri+"]");
 		songViewerFragment = (SongViewerFragment) getSupportFragmentManager()
 				.findFragmentByTag(TAG_SONGVIEWER);
 		if (songViewerFragment == null || !songViewerFragment.isVisible()) {
@@ -232,7 +231,7 @@ AddSongsToSetFragment.OnSongsAddedListener
 			// Open the file with the SongViewerActivity
 			Intent showSong = new Intent(this, SongViewerActivity.class);
 
-			showSong.setData(Uri.fromFile(new File(songPath)));
+			showSong.setData(songUri);
 			showSong.putExtra(SongViewerActivity.INTENT_SONGID, songId);
 			showSong.putExtra(SongViewerActivity.INTENT_SETID, mSetId);
 			showSong.putExtra(SongViewerActivity.INTENT_INSET, true);
@@ -241,7 +240,7 @@ AddSongsToSetFragment.OnSongsAddedListener
 		}
 		else {
 			Log.d(TAG, "HELLO onSongSelected - found the fragment");
-			songViewerFragment.setSong(false, songId, songPath, null);
+			songViewerFragment.setSong(false, songId, songUri);
 			if(!mSongInView){
 				addShareButton();
 			}
