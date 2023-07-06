@@ -51,7 +51,6 @@
     <string name="menu_insert">Ajouter un Élément</string>
     <string name="menu_delete">Supprimer les chansons ?</string>
     <string name="song_summary">Résumé</string>
-    <string name="song_description">Supprimer les chansons ?</string>
     <string name="song_edit_summary">Résumé</string>
     <string name="song_edit_description">Descriptif</string>
     <string name="song_edit_confirm">Confirmer</string>

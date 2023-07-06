@@ -1,7 +1,5 @@
 package com.bondevans.chordinator.conversion;
 
-
-
 import com.bondevans.chordinator.Log;
 import com.bondevans.chordinator.Song;
 
@@ -27,15 +25,12 @@ public class SongConverter {
 		theSong = new Song();
 		theSong.setSongText("");
 	}
-
 	public Song getSong(){
 		return theSong;
 	}
-
 	public String getIntText(){
 		return intText;
 	}
-
 	/**
 	 * Creates and returns the Finished CSF format SongText
 	 * @return
@@ -170,7 +165,6 @@ public class SongConverter {
 	public void setComposer( String composer){
 		this.theSong.setComposer(composer);
 	}
-
 	/**
 	 * Converts from mono-spaced format to intermediate csf format - which
 	 * is essentially assigning a type to each line of the song.
@@ -261,11 +255,9 @@ public class SongConverter {
 			Log.d(TAG,  "Line [" + x + "] is a "+ TypeText[lineType[x]] + "line");
 		}
 	}
-
 	public String[] getLines(){
 		return songLine;
 	}
-
 	public int[] getTypes(){
 		return lineType;
 	}
@@ -337,7 +329,7 @@ public class SongConverter {
 	}
 	/** Tests a string to see whether it looks like a chord
 	 *
-	 * @param item
+	 * @param text
 	 * @return
 	 */
 	private static boolean isChord(String text){

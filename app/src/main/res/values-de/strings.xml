@@ -51,7 +51,6 @@
     <string name="menu_insert">"Song einfügen"</string>
     <string name="menu_delete">"Song löschen"</string>
     <string name="song_summary">"Zusammenfassung"</string>
-    <string name="song_description">"Song löschen"</string>
     <string name="song_edit_summary">"Zusammenfassung"</string>
     <string name="song_edit_description">"Beschreibung    "</string>
     <string name="song_edit_confirm">"Bestätigen"</string>

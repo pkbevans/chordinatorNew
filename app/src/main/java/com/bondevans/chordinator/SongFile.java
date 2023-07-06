@@ -15,7 +15,7 @@ import android.net.Uri;
  */
 public class SongFile {
 	private final static String TAG = "SongFile";
-	private Song	theSong=new Song();
+	private Song theSong=new Song();
 	private Uri	songUri = null;
 	public boolean hasTitle;
 
@@ -27,8 +27,9 @@ public class SongFile {
 	 *@param defEncoding  @throws ChordinatorException
 	 */
 	public SongFile(String filePath, FileDescriptor fileDescriptor, String defEncoding) throws ChordinatorException{
-		// REMOVED
-	}
+		File x = new File(filePath);
+//		Log.d(TAG, "HELLO File=["+songFile+ "] path=["+songPath+"]");
+		this.setSongDetails(SongUtils.loadFile(filePath, fileDescriptor, defEncoding));	}
 	public SongFile(Activity activity, Uri uri) throws ChordinatorException{
 		songUri=uri;
 		this.setSongDetails(SongUtils.loadFile(activity, uri));

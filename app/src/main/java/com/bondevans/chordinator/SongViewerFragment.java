@@ -7,6 +7,7 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.UriPermission;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -46,6 +47,7 @@ import com.bondevans.chordinator.prefs.SongPrefs;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.List;
 
 import androidx.activity.result.ActivityResult;
 import androidx.fragment.app.Fragment;

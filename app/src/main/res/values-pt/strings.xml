@@ -51,7 +51,6 @@
     <string name="menu_insert">"Adicionar Item"</string>
     <string name="menu_delete">"Apagar Canção"</string>
     <string name="song_summary">"Sumário"</string>
-    <string name="song_description">"Apagar Canção"</string>
     <string name="song_edit_summary">"Sumário"</string>
     <string name="song_edit_description">"Descrição"</string>
     <string name="song_edit_confirm">"Confirmar"</string>

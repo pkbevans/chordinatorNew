@@ -95,7 +95,7 @@ public class EditSong extends AppCompatActivity {
 		//Write out to file in a separate thread
 		try {
 			Log.d(TAG,"saving file:"+ mFileUri);
-			SongUtils.writeFile( this, mFileUri, mSongText.getText().toString());
+			SongUtils.updateFile( this, mFileUri, mSongText.getText().toString());
 		} catch (Exception e) {
 			errMsgToast(e.getMessage());
 		}

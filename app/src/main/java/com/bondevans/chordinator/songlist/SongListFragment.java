@@ -407,25 +407,21 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		}
 		return result;
 	}
-
 	private void addSongToSet(long song_id) {
 		Log.d(TAG, "Getting Set");
 		getSongFromId(song_id);
 		showSetListDialog(song_id, mTitle);
 	}
-
 	public void showSetListDialog(long songId, String songName) {
 		DialogFragment newFragment = SetListDialog.newInstance(songId, songName);
 		newFragment.show(getFragmentManager(), "dialog");
 	}
-
     private void doDeleteX(long songId){
 			Log.d(TAG, "doDelete: "+songId);
 			getSongFromId(songId);
 			DialogFragment newFragment = DeleteSongDialog.newInstance(getString(R.string.authority), songId, mTitle, mFileUri.toString());
 			newFragment.show(getFragmentManager(), "dialog");
 	}
-
 	private void getSongFromId(long id) {
 		Cursor songCursor = getActivity().getContentResolver().query(
 				Uri.withAppendedPath(DBUtils.SONG(getString(R.string.authority)),
@@ -442,8 +438,6 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		}
 		songCursor.close();
 	}
-
-
 	/**
 	 * Edit the current Song 
 	 */
@@ -452,15 +446,14 @@ LoaderManager.LoaderCallbacks<Cursor> {
 		// Open the file with the EditSong Activity
 		Intent myIntent = new Intent(getActivity(), EditSong.class);
 		try {
-			// Put the path to the song file in the intent
-			myIntent.putExtra(getString(R.string.song_path), mFileUri);
+			// Put the URI of the song file in the intent
+			myIntent.setData(mFileUri);
 			startActivity(myIntent);
 		} 
 		catch (ActivityNotFoundException e) {
 			SongUtils.toast( getActivity(),e.getMessage());
 		}
 	}
-
 	private static class SongCursorAdapter extends SimpleCursorAdapter implements SectionIndexer{
 		private static final int TITLE_COLUMN_INDEX = 1;
 		private static final int ARTIST_COLUMN_INDEX = 2;

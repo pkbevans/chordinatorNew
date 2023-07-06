@@ -33,9 +33,11 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 
+import com.bondevans.chordinator.ChordinatorException;
 import com.bondevans.chordinator.ColourScheme;
 import com.bondevans.chordinator.Log;
 import com.bondevans.chordinator.R;
+import com.bondevans.chordinator.SongFile;
 import com.bondevans.chordinator.SongUtils;
 import com.bondevans.chordinator.Statics;
 import com.bondevans.chordinator.conversion.SongConverter;
@@ -45,15 +47,11 @@ import com.bondevans.chordinator.dialogs.GotSongDialog;
 import com.bondevans.chordinator.prefs.SongPrefs;
 import com.bondevans.chordinator.utils.Ute;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
+import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SearchActivity extends AppCompatActivity implements GotSongDialog.GotSongListener {
+public class SearchActivity extends AppCompatActivity implements GotSongDialog.GotSongListener, SongConverterFragment.ConvertFinishedListener {
 	public static final String TAG = "SearchActivity";
 	public static final String SEARCH_CRITERIA = "CRITERIA";
 	private static final CharSequence GOOGLE = "google";
@@ -95,7 +93,6 @@ public class SearchActivity extends AppCompatActivity implements GotSongDialog.G
 			Pattern.DOTALL|Pattern.CASE_INSENSITIVE);
 	private static Pattern multipleNewlinePattern = Pattern.compile("([ \t\r]*\n[\t\r ]*){2,}");
 	// Chord Reader stuff - END
-	private static String mDownloadFolder;
 
 	/* (non-Javadoc)
 	 * @see android.app.Activity#onCreate(android.os.Bundle)
@@ -135,24 +132,16 @@ public class SearchActivity extends AppCompatActivity implements GotSongDialog.G
         mProgressBar = findViewById(R.id.progress_bar); // Attaching the layout to the toolbar object
 
 
-//        getSupportActionBar().setLogo(/*mColourScheme == ColourScheme.DARK? */R.drawable.chordinator_aug_logo_dark_bkgrnd/*: R.drawable.chordinator_aug_logo_light_bkgrnd*/);
         getSupportActionBar().setTitle(R.string.search_title);
 		getSupportActionBar().setDisplayShowTitleEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        // Set download folder
-        mDownloadFolder = getDownloadFolder();
+
         if(savedInstanceState!=null){
             mTitle = savedInstanceState.getString(KEY_TITLE);
             mArtist = savedInstanceState.getString(KEY_ARTIST);
             Log.d(TAG, "savedInstanceState: "+mTitle);
         }
 	}
-
-	private String getDownloadFolder() {
-		SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-		return settings.getString(SongPrefs.PREF_KEY_DOWNLOADDIR, Statics.CHORDINATOR_DIR);
-	}
-
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		if ((keyCode == KeyEvent.KEYCODE_BACK) && searcher.canGoBack()) {
@@ -223,20 +212,75 @@ public class SearchActivity extends AppCompatActivity implements GotSongDialog.G
 		mTask = new SearchPage();
 		mTask.execute(html);
 	}
-    boolean mIsCsf = false;
-    boolean mConvertCsf = false;
     String mFileName = "";
 	String mSongText = "";
-    @Override
+	File mTmpFile;
+	@Override
     public void onGotSong(String fileName, String songText, boolean isChoPro, boolean convertChopro) {
-        mIsCsf = isChoPro;
-        mConvertCsf = convertChopro;
         mFileName = fileName;
         mSongText = songText;
-        // Save new song in somewhere on device - TODO users chooses location
-        saveTextFile(fileName);
+		// Write songText to temp internal file
+		//   Get temp internal file location
+		mTmpFile = new File (getCacheDir() + "/" + fileName);
+		// Check whether file already exists
+		if(mTmpFile.exists()){
+			Log.d(TAG, "HELLO old tmp file exists: "+ mTmpFile.getAbsolutePath());
+			// delete file
+			if(mTmpFile.delete()){
+				Log.d(TAG, "HELLO old tmp file deleted");
+			}else{
+				Log.e(TAG, "HELLO Cant delete old tmp file");
+				SongUtils.toast(SearchActivity.this, "ERROR - Can't create file:"+ mTmpFile.getAbsolutePath());
+				return;
+			}
+		}
+		try {
+			// Write out song text to a temp file
+			SongUtils.writeFile(mTmpFile.getAbsolutePath(), mSongText);
+		}catch(ChordinatorException e){
+			Log.e(TAG, "HELLO FILE ERROR: "+e.getMessage());
+		}
+		if(convertChopro){
+			// Convert internal file to csf if required
+			convertFileToChoPro(mTmpFile);
+		}else{
+			// ALready in chopro so just get user to select new file name/location
+			userSelectsFile(mFileName);
+		}
     }
-	private void saveTextFile(@NonNull String filename) {
+	@Override
+	public void onConvertFinish(boolean success, String title, String artist) {
+		mTitle = title;
+		mArtist = artist;
+		if(success){
+			userSelectsFile(mFileName);
+		}else{
+			Log.e(TAG, "HELLO Conversion failed");
+		}
+	}
+	void writeNewFile(Uri newUri){
+		SongFile sf;
+		// 4. Copy updated contents to new destination
+		try {
+			sf = new SongFile(mTmpFile.getAbsolutePath(), null, "");
+			Log.d(TAG, "HELLO got tmp file contents");
+			SongUtils.writeFile(SearchActivity.this, newUri, sf.getSong().getSongText());
+			Log.d(TAG, "HELLO written new file");
+		}catch(ChordinatorException e){
+			Log.e(TAG, "HELLO ERROR:"+e.getMessage());
+			return;
+		}
+		// Create DB entry if its already in chopro format, otherwise convert to choPro if
+		// required and then add to DB
+		if(sf.hasTitle){
+			DBUtils.addSong(getContentResolver(), getString(R.string.authority), newUri, mTitle, mArtist, "");
+		}
+		// 5. Delete temp file
+		if(!mTmpFile.delete()){
+			Log.e(TAG, "ERROR deleting temp file");
+		}
+	}
+	private void userSelectsFile(@NonNull String filename) {
 		// Launch file picker for user to choose where to store file
 		Intent saveTextFileIntent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
 		saveTextFileIntent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -258,36 +302,16 @@ public class SearchActivity extends AppCompatActivity implements GotSongDialog.G
 						Uri uri;
 						Intent intent = result.getData();
 						uri = intent.getData();
+						getContentResolver().takePersistableUriPermission(uri,
+								Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                         Log.d(TAG, "HELLO uri: "+uri.toString());
-						writeFile(uri, mSongText);
-                        SongUtils.toast( SearchActivity.this, mFileName + " "+ getString(R.string.saved));
-                        // Create DB entry if its already in chopro format, otherwise convert to choPro if
-                        // required and then add to DB
-                        if(mIsCsf){
-                            DBUtils.addSong(getContentResolver(), getString(R.string.authority), uri, mTitle, mArtist, "");
-                        }
-                        else{
-                            if(mConvertCsf){
-                                convertFileToChoPro(uri.toString());
-                            }
-                        }
+						writeNewFile(uri);
+						finish();
 					}
 				}
 			}
 	);
-	private void writeFile(Uri uri, String text){
-		OutputStream outputStream;
-		try {
-			outputStream = getContentResolver().openOutputStream(uri);
-			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(outputStream));
-			bw.write(text);
-			bw.flush();
-			bw.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-    public class SearchPage extends AsyncTask<String, Void, String>{
+	public class SearchPage extends AsyncTask<String, Void, String>{
 		String songText;
         private boolean mChopro;
 
@@ -515,7 +539,7 @@ public class SearchActivity extends AppCompatActivity implements GotSongDialog.G
     String mTitle;
     String mArtist;
     private void showGotSongDialog(final String songText, final boolean choPro) {
-        // Make sure we hafven't already got one going
+        // Make sure we haven't already got one going
         GotSongDialog mDialogFragment = (GotSongDialog) getSupportFragmentManager().findFragmentByTag(GOTSONG_TAG);
         if(mDialogFragment != null){
             mDialogFragment.dismiss();
@@ -533,10 +557,11 @@ public class SearchActivity extends AppCompatActivity implements GotSongDialog.G
 		dialog.show(getSupportFragmentManager(), GOTSONG_TAG);
 	}
 
-	private void convertFileToChoPro(String fileName) {
-		Log.d(TAG, "HELLO - converting ["+fileName+"]");
+	private void convertFileToChoPro(File tmpFile) {
+		Log.d(TAG, "HELLO - converting ["+tmpFile.getAbsolutePath()+"]");
 		SongConverterFragment newFragment = SongConverterFragment.newInstance(getString(R.string.authority),
-                mDownloadFolder, fileName);
+                tmpFile.getAbsolutePath());
+		newFragment.setConvertFinishedListener(this);
 		newFragment.show(getSupportFragmentManager(), "dialog");
     }
 

@@ -1,14 +1,10 @@
 package com.bondevans.chordinator;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.database.Cursor;
 import android.net.Uri;
@@ -17,7 +13,6 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.OpenableColumns;
-import android.provider.Settings;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -26,7 +21,7 @@ import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.bondevans.chordinator.asynctask.SortOutFilePathsTask;
+import com.bondevans.chordinator.asynctask.ImportSongTask;
 import com.bondevans.chordinator.db.DBUtils;
 import com.bondevans.chordinator.dialogs.AddSetDialog;
 import com.bondevans.chordinator.dialogs.FirstRunFragment;
@@ -40,25 +35,17 @@ import com.bondevans.chordinator.setlist.SetSongListActivity;
 import com.bondevans.chordinator.songlist.SongListFragment;
 import com.bondevans.chordinator.utils.Ute;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.Objects;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -80,16 +67,14 @@ AddSetDialog.CreateSetListener
 	private static final int FAVOURITES_ID = Menu.FIRST + 12;
 	private static final int TITLE_ID = Menu.FIRST + 13;
 	private static final int ARTIST_ID = Menu.FIRST + 14;
-	private static final int BROWSE_ID = Menu.FIRST + 15;
 	private static final int SEARCH_INTERNET_ID = Menu.FIRST + 18;
 	private static final int ABOUT_ID = Menu.FIRST + 19;
 	private static final int SEARCH_LOCAL_ID = Menu.FIRST + 25;
 	private static final int IMPORTSONGS_ID = Menu.FIRST + 26;
 	private static final int OK = 0;
 	private static final int FAILED = -1;
-
     private static int mColourScheme;
-	private static int LIGHT=ColourScheme.LIGHT;
+	private static final int LIGHT=ColourScheme.LIGHT;
 	private static final String TAG_SONGLIST = "TAG_SONGLIST";
 	public static final String TAG_SONGVIEWER = "TAG_SONGVIEWER";
 	SongListFragment 	songListFragment;
@@ -98,8 +83,6 @@ AddSetDialog.CreateSetListener
 	private int mSortOrder = SongListFragment.LIST_MODE_TITLE;
     private SearchView searchDBView ;
 	private Menu mMenu = null;
-	public static final String FRAGTAG = "StorageClientFragment";
-
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
         LinearLayout songFrame=null;
@@ -108,16 +91,7 @@ AddSetDialog.CreateSetListener
 		setTheme(mColourScheme == ColourScheme.LIGHT? R.style.Chordinator_Light_Theme_Theme: R.style.Chordinator_Dark_Theme_Theme);
 
 		logOsDetails();
-//		ChordShapeImage chordShapeImage = new ChordShapeImage(96, ChordShapeProvider.INSTRUMENT_GUITAR, "",
-//				Color.BLACK, Color.WHITE, CHORDINATOR_DIR);
-//		chordShapeImage.createPNG("Bdim");
 		super.onCreate(savedInstanceState);
-		if (checkPermission()) {
-			Log.d(TAG, "HELLO Permissions already granted...");
-		} else {
-			Log.d(TAG, "HELLO Permissions was not granted, request...");
-//			requestPermission();
-		}
 		// See if they want split screen mode in Landscape
 		int listPaneSize;
 		if((listPaneSize = useSplitScreenMode())>0){
@@ -170,14 +144,12 @@ AddSetDialog.CreateSetListener
 		searchDBView = new SearchView(getSupportActionBar().getThemedContext());
         searchDBView.setQueryHint(getString(R.string.search_hint));
         searchDBView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-
 			@Override
 			public boolean onQueryTextSubmit(String query) {
 				Log.d(TAG, "HELLO - onQueryTextSubmit1 ["+query+"]");
 				searchDBView.clearFocus();
 				return false;
 			}
-
 			@Override
 			public boolean onQueryTextChange(String newText) {
 				Log.d(TAG, "HELLO - onQueryTextChange1 ["+newText+"]");
@@ -187,10 +159,8 @@ AddSetDialog.CreateSetListener
 		});
 
 		setupActionBar();// This will be called many times
-//		onFirstRun();
+		onFirstRun();
 	}
-	@SuppressLint("NewApi")
-	@TargetApi(8)
 	private void logOsDetails() {
 		String version="";
 		try {
@@ -201,15 +171,10 @@ AddSetDialog.CreateSetListener
 		Log.d(TAG, "App Version:["+version+"]");
 		Log.d(TAG, "Device:["+Build.DEVICE+"]");
 		Log.d(TAG, "OS Version:["+Build.VERSION.SDK_INT+"]");
-		if(Build.VERSION.SDK_INT>=9){
-			Log.d(TAG, "ExternalStorageDirectory:["+Environment.getExternalStorageDirectory().getPath()+"]");
-		}
-		if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.FROYO){
-			Log.d(TAG, "Hardware:["+Build.HARDWARE+"]");
-		}
+		Log.d(TAG, "ExternalStorageDirectory:["+Environment.getExternalStorageDirectory().getPath()+"]");
+		Log.d(TAG, "Hardware:["+Build.HARDWARE+"]");
 		Log.d(TAG, "Manufacturer/Model:["+Build.MANUFACTURER+"/"+Build.MODEL+"]");
 	}
-
 	private void onFirstRun() {
 		// See if we need to display the Help Screen - Only do this the first time.
 		// After that the help will be available from the Menu
@@ -217,10 +182,9 @@ AddSetDialog.CreateSetListener
 		SharedPreferences.Editor editor = settings.edit();
 		if( settings.getBoolean(SongPrefs.PREF_KEY_FIRSTRUN, true)){
 			// If its the first time - create /chordinator directory and copy the sample songs into it
-			if(FAILED == copySamples()){
+			if(FAILED == copySample()){
 				return;	// Get outta here - don't bother with the rest
 			}
-
 			// Show First Run Welcome Screen
 			FirstRunFragment newFragment = FirstRunFragment.newInstance();
 			newFragment.show(getSupportFragmentManager(), "dialog");
@@ -236,23 +200,13 @@ AddSetDialog.CreateSetListener
 		int prevVersion = settings.getInt(SongPrefs.PREF_KEY_FIRSTRUN_VERSION, 0);
 		Log.d(TAG, "HELLO This version[" + thisVersion + "] Previous Version[" + prevVersion + "]");
 		if( prevVersion < thisVersion){
-			if( thisVersion >= 23 && prevVersion < 23){	// 2.4.0. 
-				Log.d(TAG, "HELLO Upating song file paths");
-				// Introduced new fileName handling throughout the app.
-				// Need to update all Song path entries - replace /sdcard with Environment.getExternalStorageDirectory()
-				SortOutFilePathsTask filePathsTask = new SortOutFilePathsTask(this);// Do this in background
-				filePathsTask.execute(new String[] {getString(R.string.authority)});
-
-				// Need to make sure that the current folder for the browser is not a naughty one...
-				editor.putString(SongPrefs.PREF_KEY_SONGDIR, Statics.CHORDINATOR_DIR);
-			}
+			// TODO
 		}
 		
 		editor.putInt(SongPrefs.PREF_KEY_FIRSTRUN_VERSION, thisVersion);
 		editor.putBoolean(SongPrefs.PREF_KEY_FIRSTRUN, false);
 		editor.apply(); // Use apply rather than commit to do it in background
 	}
-
 	private int useSplitScreenMode(){
 		SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
 		if( settings.getBoolean(SongPrefs.PREF_KEY_SPLIT_SCREEN, false)){
@@ -262,27 +216,24 @@ AddSetDialog.CreateSetListener
 			return 0;
 		}
 	}
-	private int copySamples(){
+	private int copySample(){
 		String sample1 = "{title:Sample Song}{composer:Paul Evans}{artist:Paul Evans}{c:Verse}My [Bm7]love has"+
 				" [A/C#]gone and [Bm7]kicked me where the sun once [A/C#]shone. [Bm7]Something grips my [A/C#]brain and all I [Bm7]see is endless [A/C#]pain and miser-ee-ee-[D7]ey... [C#]"+
 				"{c:Chorus}Cant e - [F#m]rase the [C#m]things we [Bm7]said (oh oh oh oh) [D7]But I'm still [C#]here an I'm [F#m]alive  [C#m] [Bm7] [D7]Its only [C#]Pride that gets me [F#m]up and [C#m]out my [Bm7]bed (oh oh oh oh) [D7]And I'm still [C#]here and I'll sur-[F#m]viiiiiiiiiiii[C#m]-i-i-i-i-[Bm7]ive.....";
-		File dir = new File(Statics.CHORDINATOR_DIR);
-		if( !dir.exists()){
-			if(	!dir.mkdir()){
-				Toast.makeText(this,
-						"Can't create dir: "+dir.getAbsolutePath(), Toast.LENGTH_LONG).show();
-				return FAILED;
-			}
-			try {
-				SongUtils.writeFile(Statics.CHORDINATOR_DIR+"Sample Song.txt", sample1);
-			} catch (ChordinatorException e) {
-				Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
-				return FAILED;
-			}
+		String samplePath = getFilesDir()+"/Sample Song.txt";
+		try {
+			SongUtils.writeFile(samplePath, sample1);
+			// Import sample song
+			Uri uris[] = new Uri[1];
+			uris[0]= Uri.fromFile(new File(samplePath));
+			ImportSongTask importSongTask = new ImportSongTask(MainActivity.this, getString(R.string.authority));// Do this in background
+			importSongTask.execute(uris);
+		} catch (ChordinatorException e) {
+			Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
+			return FAILED;
 		}
 		return OK;
 	}
-
 	/**
 	 * Adds song to SET selected in Dialog
 	 * @param setId Set ID
@@ -340,12 +291,10 @@ AddSetDialog.CreateSetListener
 			}
 		}
 	}
-
 	@Override
 	public void browseFiles() {
 
 	}
-
 	/* (non-Javadoc)
 	 * @see com.actionbarsherlock.app.SherlockFragmentActivity#onCreateOptionsMenu(com.actionbarsherlock.view.Menu)
 	 */
@@ -397,14 +346,12 @@ AddSetDialog.CreateSetListener
 
 		return super.onCreateOptionsMenu(menu);
 	}
-
 	void addShareButton(){
 		MenuItem menuItem = mMenu.add(0, SHARESONG_ID, 0, getString(R.string.share_song))
 		.setIcon(R.drawable.ic_menu_share);
 		menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 		mSongInView = true;
 	}
-
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		Log.d(TAG, "onOptionsItemSelected");
@@ -475,18 +422,15 @@ AddSetDialog.CreateSetListener
 	public String getFileName(Uri uri) {
 		String result = null;
 		if (uri.getScheme().equals("content")) {
-			Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-			try {
+			try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
 				if (cursor != null && cursor.moveToFirst()) {
-					int x=cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-					if(x>=0){
+					int x = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+					if (x >= 0) {
 						result = cursor.getString(x);
-					}else{
+					} else {
 						result = "";
 					}
 				}
-			} finally {
-				cursor.close();
 			}
 		}
 		if (result == null) {
@@ -510,70 +454,29 @@ AddSetDialog.CreateSetListener
 						Intent intent = result.getData();
 						ClipData clipData = intent.getClipData();
 						if(clipData == null) {
+							// Single file selected - view the file and import if not already in the listing
 							uri = intent.getData();
 							// Check for the freshest data.
 							getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 							viewSongFromUri(uri);
 						}else{
+							// Multiple files selected - just import the songs - don't view
 							int x = clipData.getItemCount();
+							Uri uris[] = new Uri[x];
+							// Create a list of Uris
 							for(int i=0; i<x;i++){
 								uri = clipData.getItemAt(i).getUri();
-								Log.d(TAG, "HELLO Got item: "+ getFileName(uri));
-								// Just import the songs - dont view
 								getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-								importSongFile(uri);
+								Log.d(TAG, "HELLO Got uri: "+uri +" file: "+ getFileName(uri));
+								uris[i]= clipData.getItemAt(i).getUri();
 							}
+							ImportSongTask importSongTask = new ImportSongTask(MainActivity.this, getString(R.string.authority));// Do this in background
+							importSongTask.execute(uris);
 						}
 					}
 				}
 			}
 	);
-	void importSongFile(Uri uri){
-		SongFile sf = null;
-		try {
-			// Create a new SongFile - this loads up the contents of the file into the Song class
-			sf = new SongFile(this, uri);
-		} catch (ChordinatorException e) {
-			Log.d(TAG, "HELLO ERROR!!!!!:"+getFileName(uri));
-			return;
-		}
-		if(sf.hasTitle){
-			// Need to compare the correct path - i.e. the same that will be logged when a file is opened from the
-			// file browser - this is all handled in DBUtils.
-			Log.d(TAG, "HELLO IS chopro");
-			if(DBUtils.getSongIdFromUri(getContentResolver(), getString(R.string.authority), uri)==0){
-				Log.d(TAG, "HELLO adding to DB");
-				DBUtils.addSong(getContentResolver(),
-						getString(R.string.authority),
-						sf.getSongUri(),
-						sf.getTitleTitleCase(),
-						sf.getArtistTitleCase(),
-						sf.getComposerTitleCase());
-			}
-			else{
-				Toast.makeText(MainActivity.this, sf.getTitle()+ " ignored. Already in Chordinator", Toast.LENGTH_SHORT).show();
-				Log.d(TAG, "HELLO Already in DB");
-			}
-		}
-		else{
-			Log.d(TAG, "HELLO NOT chopro");
-			// TODO - convert to chopro
-		}
-	}
-
-	private String readTextFromUri(Uri uri) throws IOException {
-		StringBuilder stringBuilder = new StringBuilder();
-		try (InputStream inputStream =
-					 getContentResolver().openInputStream(uri);
-			 BufferedReader reader = new BufferedReader(
-					 new InputStreamReader(Objects.requireNonNull(inputStream)))) {
-			String line;
-			while ((line = reader.readLine()) != null) {
-				stringBuilder.append(line);
-			}
-		}
-		return stringBuilder.toString();
-	}
 	private void deleteSongs() {
 		Log.d(TAG, "HELLO deleteSongs");
 		AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
@@ -630,7 +533,6 @@ AddSetDialog.CreateSetListener
 		DialogFragment newFragment = AddSetDialog.newInstance(true, songId, songName);
         newFragment.show(getSupportFragmentManager(), "dialog");
 	}
-
 	public void createSet(String setName, long songId, String songName){
 		Log.d(TAG, "HELLO setName=["+setName+"]");
 		long setId = DBUtils.createSet(getContentResolver(), getString(R.string.authority), setName);
@@ -642,26 +544,22 @@ AddSetDialog.CreateSetListener
 			}
 		}
 	}
-
 	private void setupActionBar(){
 		getSupportActionBar().setDisplayHomeAsUpEnabled(false);
 		getSupportActionBar().setDisplayShowTitleEnabled(false);
 		getSupportActionBar().setDisplayShowHomeEnabled(true);
 		getSupportActionBar().setLogo(mColourScheme == LIGHT ? R.drawable.chordinator_aug_logo_light_bkgrnd : R.drawable.chordinator_aug_logo_dark_bkgrnd);
 	}
-
 	@Override
 	public void onSaveInstanceState(Bundle outState) {
 		Log.d(TAG, "HELLO on SaveInstanceState");
 		super.onSaveInstanceState(outState);
 	}
-
 	@Override
 	/*
 	 * Handle non-menu keyboard events
 	 */
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
-//		Log.d(TAG, "HELLO - onKeyDown");
 		switch (keyCode) {
 		case KeyEvent.KEYCODE_BACK:
 			Log.d(TAG, "HELLO - BACK PRESSED");
@@ -670,7 +568,6 @@ AddSetDialog.CreateSetListener
 		}
 		return false;
 	}
-
 	private final class SongActionMode implements ActionMode.Callback{
 		@Override
 		public boolean onCreateActionMode(ActionMode mode, Menu menu) {
@@ -693,13 +590,11 @@ AddSetDialog.CreateSetListener
 			menuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
 			return true;
 		}
-
 		@Override
 		public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
 			Log.d(TAG, "HELLO - onPrepareActionMode");
 			return true;
 		}
-
 		@Override
 		public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
 			Log.d(TAG, "HELLO - onActionItemClicked");
@@ -718,13 +613,11 @@ AddSetDialog.CreateSetListener
 			mode.finish();
 			return true;
 		}
-
 		@Override
 		public void onDestroyActionMode(ActionMode mode) {
 			//			mActionMode = null;
 		}
 	}
-
 	private void searchInternetForSongs(){
 		Log.d(TAG, "SearchForSongs");
 		Intent myIntent = new Intent(this, SearchCriteria.class);
@@ -742,7 +635,6 @@ AddSetDialog.CreateSetListener
 	public void prevSong() {
 		// NOT applicable in Landscape
 	}
-
 	public void sortByFavs(){
 		Log.d(TAG, "HELLO sortbyfavs");
 		// Reorder the songlist by favourites
@@ -767,76 +659,16 @@ AddSetDialog.CreateSetListener
 		mSortOrder = SongListFragment.LIST_MODE_ARTIST;
 		songListFragment.changeSortOrder(mSortOrder);
 	}
-
 	@Override
 	public void onNewFileCreated() {
 		// SHOULD NEVER BE CALLED
 		Log.d(TAG, "HELLO onNewFileCreated - WHY HAS THIS BEEN CALLED");
 	}
-
 	@Override
 	public void createBrowserSet(String setName, String songName) {
 		// SHOULD NEVER BE CALLED
 		Log.d(TAG, "HELLO createBrowserSet - WHY HAS THIS BEEN CALLED");
 	}
-	// NEW STORAGE PERMISSION REQUEST
-	private static final int STORAGE_PERMISSION_CODE = 100;
-	private void requestPermission(){
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
-			//Android is 11(R) or above
-			try {
-				Log.d(TAG, "HELLO requestPermission: try");
-
-				Intent intent = new Intent();
-				intent.setAction(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-				Uri uri = Uri.fromParts("package", this.getPackageName(), null);
-				intent.setData(uri);
-				storageActivityResultLauncher.launch(intent);
-			}
-			catch (Exception e){
-				Log.e(TAG, "HELLO requestPermission: catch");
-				Intent intent = new Intent();
-				intent.setAction(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
-				storageActivityResultLauncher.launch(intent);
-			}
-		}
-		else {
-			//Android is below 11(R)
-			ActivityCompat.requestPermissions(
-					this,
-					new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE},
-					STORAGE_PERMISSION_CODE
-			);
-		}
-	}
-
-	private final ActivityResultLauncher<Intent> storageActivityResultLauncher = registerForActivityResult(
-		new ActivityResultContracts.StartActivityForResult(),
-		new ActivityResultCallback<ActivityResult>() {
-			@Override
-			public void onActivityResult(ActivityResult result) {
-				Log.d(TAG, "onActivityResult: ");
-				//here we will handle the result of our intent
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
-					//Android is 11(R) or above
-					if (Environment.isExternalStorageManager()){
-						//Manage External Storage Permission is granted
-						Log.d(TAG, "onActivityResult: Manage External Storage Permission is granted");
-						// TODO
-						onFirstRun();
-					}
-					else{
-						//Manage External Storage Permission is denied
-						Log.d(TAG, "onActivityResult: Manage External Storage Permission is denied");
-						Toast.makeText(MainActivity.this, "Manage External Storage Permission is denied", Toast.LENGTH_SHORT).show();
-					}
-				}
-				else {
-					//Android is below 11(R) - IGNORE
-				}
-			}
-		}
-	);
 	private final ActivityResultLauncher<Intent> prefsUpdateResultLauncher = registerForActivityResult(
 			new ActivityResultContracts.StartActivityForResult(),
 			new ActivityResultCallback<ActivityResult>() {
@@ -853,42 +685,4 @@ AddSetDialog.CreateSetListener
 				}
 			}
 	);
-	public boolean checkPermission(){
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R){
-			//Android is 11(R) or above
-			return Environment.isExternalStorageManager();	// Does the app alrady have all files permission?
-		}
-		else{
-			//Android is below 11(R)
-			int write = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-			int read = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
-
-			return write == PackageManager.PERMISSION_GRANTED && read == PackageManager.PERMISSION_GRANTED;
-		}
-	}
-	/*Handle permission request results*/
-	@Override
-	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-		if (requestCode == STORAGE_PERMISSION_CODE){
-			if (grantResults.length > 0){
-				//check each permission if granted or not
-				boolean write = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-				boolean read = grantResults[1] == PackageManager.PERMISSION_GRANTED;
-
-				if (write && read){
-					//External Storage permissions granted
-					Log.d(TAG, "HELLO onRequestPermissionsResult: External Storage permissions granted");
-					// Only run this if they have given consent
-					onFirstRun();
-				}
-				else{
-					//External Storage permission denied
-					Log.d(TAG, "HELLO onRequestPermissionsResult: External Storage permission denied");
-					// Handle user not allowing access.
-					Toast.makeText(this, getString(R.string.permission_required), Toast.LENGTH_SHORT).show();
-				}
-			}
-		}
-	}
 }

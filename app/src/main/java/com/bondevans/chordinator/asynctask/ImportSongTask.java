@@ -9,39 +9,31 @@ import android.widget.Toast;
 
 import com.bondevans.chordinator.ChordinatorException;
 import com.bondevans.chordinator.Log;
-import com.bondevans.chordinator.R;
 import com.bondevans.chordinator.SongFile;
 import com.bondevans.chordinator.db.DBUtils;
-
-import java.util.List;
 
 /**
  * Imports song file URIs in background.
  */
-public class ImportSongTask extends AsyncTask<Void, Void, Void> {
+public class ImportSongTask extends AsyncTask<Uri, String, Void> {
 	private static final String TAG = "ImportSongTask";
 	private Activity mActivity;
 	private String mAuthority;
-	private List<Uri> mUris;
-
-	public ImportSongTask(Activity activity, String authority, List<Uri> uris) {
+	public ImportSongTask(Activity activity, String authority) {
 		mActivity = activity;
 		mAuthority = authority;
-		mUris = uris;
 	}
 
 	@Override
-	protected Void doInBackground(Void... voids) {
-		importFiles();
-		return null;
-	}
-
-	void importFiles() {
+	protected Void doInBackground(Uri... uris) {
 		Log.d(TAG, "HELLO - importing files");
-		// then iterate thru new list and give each one a set_order
-		for (Uri uri: mUris) {
+		for(Uri uri: uris){
 			importSongFile(uri);
 		}
+		return null;
+	}
+	protected void onProgressUpdate(String... progress) {
+		// TODO
 	}
 	void importSongFile(Uri uri){
 		SongFile sf = null;
@@ -56,14 +48,15 @@ public class ImportSongTask extends AsyncTask<Void, Void, Void> {
 			// Need to compare the correct path - i.e. the same that will be logged when a file is opened from the
 			// file browser - this is all handled in DBUtils.
 			Log.d(TAG, "HELLO IS chopro");
-			if(DBUtils.getSongIdFromUri(mActivity.getContentResolver(), mActivity.getString(R.string.authority), uri)==0){
+			if(DBUtils.getSongIdFromUri(mActivity.getContentResolver(), mAuthority, uri)==0){
 				Log.d(TAG, "HELLO adding to DB");
 				DBUtils.addSong(mActivity.getContentResolver(),
-						mActivity.getString(R.string.authority),
+						mAuthority,
 						sf.getSongUri(),
 						sf.getTitleTitleCase(),
 						sf.getArtistTitleCase(),
 						sf.getComposerTitleCase());
+				publishProgress(getFileName(uri));
 			}
 			else{
 				Toast.makeText(mActivity, sf.getTitle()+ " ignored. Already in Chordinator", Toast.LENGTH_SHORT).show();

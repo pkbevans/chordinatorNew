@@ -3,7 +3,6 @@ package com.bondevans.chordinator;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -12,8 +11,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.util.Objects;
 
 import android.annotation.SuppressLint;
@@ -22,6 +19,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Environment;
 
+import android.os.ParcelFileDescriptor;
 import android.widget.Toast;
 /**
  * Class representing various Utility functions
@@ -218,21 +216,40 @@ public class SongUtils {
 			throw new ChordinatorException("An error has ocurred writing: ["+fileName+"]:"+ e.getMessage());
 		}
 	}
-	public final static void writeFile( Activity activity, Uri fileUri, String contents) throws ChordinatorException{
-		OutputStream outputStream;
-		Log.d(TAG,"Writing: " + fileUri);
-		byte [] utfHeader = {(byte)0xef,(byte)0xbb,(byte)0xbf};
+	public final static void writeFile( Activity activity, Uri uri, String contents) throws ChordinatorException{
 		try {
-			outputStream = activity.getContentResolver().openOutputStream(fileUri);
-			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(outputStream));
-			bw.write(contents);
-			bw.flush();
-			bw.close();
-		}
-		catch (IOException e) {
-			Log.e(TAG, "WriteFile failed: "+e.getMessage());
+			ParcelFileDescriptor pfd = activity.getContentResolver().
+					openFileDescriptor(uri, "w");
+			FileOutputStream fileOutputStream =
+					new FileOutputStream(pfd.getFileDescriptor());
+			fileOutputStream.write(contents.getBytes());
+			// Let the document provider know you're done by closing the stream.
+			fileOutputStream.close();
+			pfd.close();
+		} catch (FileNotFoundException e) {
 			e.printStackTrace();
-			throw new ChordinatorException("An error has occurred writing: ["+fileUri+"]:"+ e.getMessage());
+			throw new ChordinatorException("File Not found: ["+uri+"]:"+ e.getMessage());
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new ChordinatorException("An error has occurred writing: ["+uri+"]:"+ e.getMessage());
+		}
+	}
+	public final static void updateFile(Activity activity, Uri uri, String contents) throws ChordinatorException{
+		try {
+			ParcelFileDescriptor pfd = activity.getContentResolver().
+					openFileDescriptor(uri, "w");
+			FileOutputStream fileOutputStream =
+					new FileOutputStream(pfd.getFileDescriptor());
+			fileOutputStream.write(contents.getBytes());
+			// Let the document provider know you're done by closing the stream.
+			fileOutputStream.close();
+			pfd.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			throw new ChordinatorException("File Not found: ["+uri+"]:"+ e.getMessage());
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new ChordinatorException("An error has occurred writing: ["+uri+"]:"+ e.getMessage());
 		}
 	}
 	public static void toast(Context context, String msg){

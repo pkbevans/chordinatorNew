@@ -51,7 +51,6 @@
     <string name="menu_insert">"Додати елемент"</string>
     <string name="menu_delete">"Видалення пісні"</string>
     <string name="song_summary">"Висновки"</string>
-    <string name="song_description">"Видалення пісні"</string>
     <string name="song_edit_summary">"Висновки"</string>
     <string name="song_edit_description">"Опис"</string>
     <string name="song_edit_confirm">"Підтвердити"</string>

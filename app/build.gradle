@@ -18,8 +18,8 @@ android {
         applicationId "com.bondevans.chordinator.v2"
         minSdk 19
         targetSdk 33
-        versionCode 78
-        versionName "7.0.1"
+        versionCode 1
+        versionName "1.0.0Beta"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }

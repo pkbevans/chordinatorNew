@@ -51,8 +51,7 @@
     <string name="menu_insert">Adicionar ítem</string>
     <string name="menu_delete">Apagar música</string>
     <string name="song_summary">Relatório</string>
-    <string name="song_description">Apagar música</string>
-    <string name="song_edit_summary">Relatório</string>
+     <string name="song_edit_summary">Relatório</string>
     <string name="song_edit_description">Descrição</string>
     <string name="song_edit_confirm">Confirma</string>
     <string name="set_name">Selecionar LISTA</string>
