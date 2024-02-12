@@ -7,8 +7,6 @@ android {
         debug {
             storeFile file('C:\\Users\\Paul\\Documents\\chordinatorNew\\keystore\\keystore.jks')
             keyAlias 'chordinator'
-            storePassword 'beefheart'
-            keyPassword 'beefheart'
         }
     }
     namespace 'com.bondevans.chordinator'
